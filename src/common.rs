@@ -2697,12 +2697,21 @@ pub fn get_hwid() -> Bytes {
 
 #[inline]
 pub fn get_builtin_option(key: &str) -> String {
-    config::BUILTIN_SETTINGS
+    if let Some(v) = config::BUILTIN_SETTINGS
         .read()
         .unwrap()
         .get(key)
         .cloned()
-        .unwrap_or_default()
+    {
+        return v;
+    }
+    match key {
+        "hide-remote-printer-settings" => "Y".to_owned(),
+        "hide-stop-service" => "Y".to_owned(),
+        "disable-change-permanent-password" => "Y".to_owned(),
+        "disable-change-id" => "Y".to_owned(),
+        _ => "".to_owned(),
+    }
 }
 
 #[inline]

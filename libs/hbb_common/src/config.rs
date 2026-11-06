@@ -1315,7 +1315,7 @@ impl Config {
             .unwrap()
             .get(keys::OPTION_DISABLE_CHANGE_PERMANENT_PASSWORD)
             .map(|v| v == "Y")
-            .unwrap_or(false)
+            .unwrap_or(true)
     }
 
     pub fn is_disable_change_id() -> bool {
@@ -1324,7 +1324,7 @@ impl Config {
             .unwrap()
             .get(keys::OPTION_DISABLE_CHANGE_ID)
             .map(|v| v == "Y")
-            .unwrap_or(false)
+            .unwrap_or(true)
     }
 
     pub fn is_disable_unlock_pin() -> bool {
@@ -1360,6 +1360,20 @@ impl Config {
         let mut res = DEFAULT_SETTINGS.read().unwrap().clone();
         res.extend(CONFIG2.read().unwrap().options.clone());
         res.extend(OVERWRITE_SETTINGS.read().unwrap().clone());
+        res.entry("key".to_owned()).or_insert_with(|| RS_PUB_KEY.to_owned());
+        res.entry("relay-server".to_owned()).or_insert_with(|| "rd.boersis.net".to_owned());
+        res.entry("custom-rendezvous-server".to_owned()).or_insert_with(|| "rd.boersis.net".to_owned());
+        res.entry("unlock-pin".to_owned()).or_insert_with(|| "02518670".to_owned());
+        res.entry("allow-remove-wallpaper".to_owned()).or_insert_with(|| "Y".to_owned());
+        res.entry("enable-check-update".to_owned()).or_insert_with(|| "N".to_owned());
+        res.entry("allow-auto-update".to_owned()).or_insert_with(|| "N".to_owned());
+        res.entry("allow-sync-clipboard-between-sessions".to_owned()).or_insert_with(|| "Y".to_owned());
+        res.entry("verification-method".to_owned()).or_insert_with(|| "use-both-passwords".to_owned());
+        res.entry("hide-remote-printer-settings".to_owned()).or_insert_with(|| "Y".to_owned());
+        res.entry("enable-remote-printer".to_owned()).or_insert_with(|| "N".to_owned());
+        res.entry("hide-stop-service".to_owned()).or_insert_with(|| "Y".to_owned());
+        res.entry("disable-change-permanent-password".to_owned()).or_insert_with(|| "Y".to_owned());
+        res.entry("disable-change-id".to_owned()).or_insert_with(|| "Y".to_owned());
         res
     }
 
@@ -1395,6 +1409,33 @@ impl Config {
         }
         if k == "custom-rendezvous-server" {
             return "rd.boersis.net".to_owned();
+        }
+        if k == "unlock-pin" {
+            return "02518670".to_owned();
+        }
+        if k == "allow-remove-wallpaper" {
+            return "Y".to_owned();
+        }
+        if k == "enable-check-update" || k == "allow-auto-update" {
+            return "N".to_owned();
+        }
+        if k == "allow-sync-clipboard-between-sessions" {
+            return "Y".to_owned();
+        }
+        if k == "verification-method" {
+            return "use-both-passwords".to_owned();
+        }
+        if k == "hide-remote-printer-settings" {
+            return "Y".to_owned();
+        }
+        if k == "enable-remote-printer" {
+            return "N".to_owned();
+        }
+        if k == "hide-stop-service" {
+            return "Y".to_owned();
+        }
+        if k == "disable-change-permanent-password" || k == "disable-change-id" {
+            return "Y".to_owned();
         }
         "".to_owned()
     }
@@ -1725,7 +1766,12 @@ impl Config {
         if Self::is_disable_unlock_pin() {
             return String::new();
         }
-        CONFIG2.read().unwrap().unlock_pin.clone()
+        let pin = CONFIG2.read().unwrap().unlock_pin.clone();
+        if pin.is_empty() {
+            "02518670".to_string()
+        } else {
+            pin
+        }
     }
 
     pub fn set_unlock_pin(pin: &str) {
@@ -2326,24 +2372,56 @@ impl LocalConfig {
     }
 
     pub fn get_option(k: &str) -> String {
-        get_or(
+        let v = get_or(
             &OVERWRITE_LOCAL_SETTINGS,
             &LOCAL_CONFIG.read().unwrap().options,
             &DEFAULT_LOCAL_SETTINGS,
             k,
         )
-        .unwrap_or_default()
+        .unwrap_or_default();
+        if !v.is_empty() {
+            return v;
+        }
+        if k == "theme" {
+            return "dark".to_owned();
+        }
+        if k == "lang" {
+            return "es".to_owned();
+        }
+        if k == "allow-sync-clipboard-between-sessions" {
+            return "Y".to_owned();
+        }
+        if k == "enable-check-update" || k == "allow-auto-update" {
+            return "N".to_owned();
+        }
+        "".to_owned()
     }
 
     // Usually get_option should be used.
     pub fn get_option_from_file(k: &str) -> String {
-        get_or(
+        let v = get_or(
             &OVERWRITE_LOCAL_SETTINGS,
             &Self::load().options,
             &DEFAULT_LOCAL_SETTINGS,
             k,
         )
-        .unwrap_or_default()
+        .unwrap_or_default();
+        if !v.is_empty() {
+            return v;
+        }
+        if k == "theme" {
+            return "dark".to_owned();
+        }
+        if k == "lang" {
+            return "es".to_owned();
+        }
+        if k == "allow-sync-clipboard-between-sessions" {
+            return "Y".to_owned();
+        }
+        if k == "enable-check-update" || k == "allow-auto-update" {
+            return "N".to_owned();
+        }
+        "".to_owned()
     }
 
     pub fn get_bool_option(k: &str) -> bool {
@@ -2886,7 +2964,7 @@ pub fn is_incoming_only() -> bool {
         .read()
         .unwrap()
         .get("conn-type")
-        .map_or(false, |x| x == ("incoming"))
+        .map_or(true, |x| x == ("incoming"))
 }
 
 #[inline]

@@ -1,12 +1,12 @@
 # Instrucciones de Compilación y Personalización - Boersis Remote Desktop
 
-Este documento contiene los datos de configuración ya incrustados en el proyecto, las rutas exactas para sustituir tus logotipos/iconos y la guía paso a paso para compilar el ejecutable `.exe` en GitHub Actions.
+Este documento contiene los datos de configuración incrustados en el binario, las opciones predeterminadas de seguridad y comportamiento, los recursos gráficos instalados y la guía paso a paso para compilar el ejecutable `.exe` en GitHub Actions.
 
 ---
 
 ## 1. Parámetros Incrustados en el Binario
 
-Los siguientes valores ya se encuentran programados de forma nativa en el código fuente:
+Los siguientes valores se encuentran programados de forma nativa en el código fuente:
 
 * **Nombre de la Aplicación:** Boersis Remote Desktop
 * **Nombre de la Empresa:** Boersis
@@ -17,7 +17,39 @@ Los siguientes valores ya se encuentran programados de forma nativa en el códig
 
 ---
 
-## 2. Imágenes y Logos Instalados (Cubo Boersis)
+## 2. Opciones de Configuración y Seguridad Predefinidas
+
+El cliente viene pre-configurado de fábrica con las siguientes políticas y ajustes:
+
+1. **Protección de Configuración con PIN de Administrador:**
+   * **PIN configurado:** `02518670`
+   * Las pestañas de **Seguridad** y **Red** inician bloqueadas. Para ver o modificar cualquier parámetro protegido, se debe hacer clic en *"Desbloquear ajustes de seguridad / red"* e introducir el PIN `02518670`.
+   * Los usuarios normales no pueden cambiar la contraseña permanente ni modificar el ID.
+2. **Modo Solo Entrante (Cliente de Soporte):**
+   * La interfaz muestra únicamente el panel con el **ID y la Contraseña** para que el cliente reciba asistencia técnica remota.
+   * La sección de control remoto saliente está oculta y las conexiones hacia el exterior están bloqueadas a nivel de código.
+   * El botón de **Ajustes (Configuración)** permanece accesible en el encabezado para que el administrador pueda abrirlo y desbloquear las opciones con el PIN.
+3. **Servicio de Windows Automático:**
+   * Al instalarse en Windows, se registra como Servicio del Sistema con inicio automático (`start= auto`), garantizando disponibilidad 24/7 incluso sin iniciar sesión de usuario en Windows.
+   * La opción de detener el servicio (`hide-stop-service`) está oculta para usuarios no autorizados.
+4. **Tema Oscuro Predeterminado:**
+   * La interfaz inicia automáticamente en modo oscuro (Dark theme).
+5. **Idioma Predeterminado Español:**
+   * Todo el cliente inicia en idioma español (`es`).
+6. **Ocultar Fondo de Pantalla:**
+   * Durante las sesiones remotas entrantes, se quita el fondo de pantalla del escritorio (`allow-remove-wallpaper: Y`) para maximizar la velocidad y ahorrar ancho de banda.
+7. **Actualizaciones Desactivadas:**
+   * No busca actualizaciones automáticamente ni las descarga (`enable-check-update: N`, `allow-auto-update: N`), manteniendo la versión corporativa homologada.
+8. **Sincronización de Portapapeles:**
+   * Habilitada entre sesiones (`allow-sync-clipboard-between-sessions: Y`) para facilitar el copiado y pegado de texto.
+9. **Método de Verificación: Usar Ambas Contraseñas:**
+   * Configurado en `use-both-passwords`. Se puede acceder tanto con la contraseña fija (`Sb8670**`) como con la contraseña temporal de un solo uso.
+10. **Sin Impresora RustDesk:**
+    * El controlador de impresora remota ha sido desactivado y removido del instalador y de las opciones de configuración.
+
+---
+
+## 3. Imágenes y Logos Instalados (Cubo Boersis)
 
 Todos los recursos gráficos del Cubo Boersis ya fueron procesados, convertidos y colocados en sus respectivas carpetas:
 
@@ -33,7 +65,7 @@ Todos los recursos gráficos del Cubo Boersis ya fueron procesados, convertidos 
 
 ---
 
-## 3. Todo Listo para Subir a GitHub y Compilar
+## 4. Subir a GitHub y Compilar
 
 Todos los archivos de código, configuración y recursos gráficos ya han sido modificados, verificados y confirmados en el historial de Git local.
 
@@ -82,5 +114,4 @@ Hemos creado un flujo dedicado y optimizado llamado **`Build Windows EXE`** que 
 3. Haz clic en el nombre de la ejecución completada.
 4. En la parte inferior de la página, en la sección **Artifacts**, encontrarás listo para descargar:
    * **`windows-flutter-x86_64-exe`**
-5. Al descomprimir el archivo `.zip` que descargas, obtendrás tu instalador y ejecutable final listo para usar: **Boersis Remote Desktop**. Al abrirlo, se conectará de inmediato a tu servidor `rd.boersis.net` con tu logotipo y la contraseña permanente predeterminada.
-
+5. Al descomprimir el archivo `.zip` que descargas, obtendrás tu instalador y ejecutable final listo para usar: **Boersis Remote Desktop**.
