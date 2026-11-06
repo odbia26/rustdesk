@@ -33,54 +33,54 @@ Todos los recursos gráficos del Cubo Boersis ya fueron procesados, convertidos 
 
 ---
 
-## 3. Pasos Siguientes para Compilar tu `.exe`
+## 3. Todo Listo para Subir a GitHub y Compilar
+
+Todos los archivos de código, configuración y recursos gráficos ya han sido modificados, verificados y confirmados en el historial de Git local.
 
 ### Paso 1: Subir los cambios a tu repositorio en GitHub
 
-1. Abre una terminal (PowerShell o Git Bash) en la raíz de esta carpeta (`c:\Factor-ia\RustDesk`).
-2. Si reemplazaste iconos o hiciste ajustes adicionales, confírmalos:
-   ```bash
-   git add .
-   git commit -m "feat: actualizar logos de Boersis"
-   ```
-3. Sube la rama `master` a tu repositorio remoto:
-   ```bash
-   git push origin master
-   ```
-   *(Si el sistema solicita autenticación, ingresa tu usuario de GitHub y un Personal Access Token con permisos `repo` y `workflow`).*
+Abre una terminal (PowerShell o Git Bash) en la raíz de esta carpeta (`c:\Factor-ia\RustDesk`) y ejecuta:
+
+```bash
+git push origin master
+```
+
+> **Nota:** Si Git te solicita credenciales:
+> * **Username:** Tu usuario de GitHub (`odbia26`).
+> * **Password:** Un **Personal Access Token** de GitHub (creado en *GitHub > Settings > Developer Settings > Personal access tokens* con permisos `repo` y `workflow`).
 
 ---
 
 ### Paso 2: Habilitar Permisos de Actions en GitHub
 
-Para que los servidores de compilación de GitHub puedan empaquetar los artefactos:
+Para que GitHub Actions pueda compilar y almacenar los archivos ejecutables:
 
 1. Ve a tu repositorio en GitHub: [https://github.com/odbia26/rustdesk](https://github.com/odbia26/rustdesk)
 2. Haz clic en la pestaña **Settings** (Configuración del repositorio).
-3. En el menú de la izquierda, entra a **Actions** > **General**.
+3. En el menú lateral izquierdo, haz clic en **Actions** > **General**.
 4. Desplázate hacia abajo hasta la sección **Workflow permissions**.
 5. Selecciona la opción **Read and write permissions**.
-6. Haz clic en **Save** (Guardar).
+6. Haz clic en el botón **Save** (Guardar).
 
 ---
 
 ### Paso 3: Disparar la Compilación de Windows
 
-Hemos creado un flujo optimizado llamado **Build Windows EXE** que compila únicamente el cliente para Windows (evita compilar macOS, Linux o Android, ahorrando tiempo):
+Hemos creado un flujo dedicado y optimizado llamado **`Build Windows EXE`** que compila únicamente la versión de Windows (ahorrando tiempo y evitando fallos con macOS o Android):
 
-1. En la página de tu repositorio en GitHub, ve a la pestaña **Actions**.
-2. En el panel izquierdo, selecciona el flujo: **`Build Windows EXE`**.
+1. En la página de tu repositorio en GitHub, haz clic en la pestaña **Actions**.
+2. En la lista de flujos del panel izquierdo, selecciona: **`Build Windows EXE`**.
 3. Haz clic en el botón desplegable de la derecha: **`Run workflow`**.
-4. Comprueba que esté seleccionada la rama **`master`** y pulsa el botón verde **Run workflow**.
+4. Asegúrate de que esté seleccionada la rama **`master`** y pulsa el botón verde **Run workflow**.
 
 ---
 
 ### Paso 4: Descargar el Ejecutable Generado
 
-1. La compilación tomará habitualmente entre **15 y 20 minutos**.
-2. Verás la ejecución en curso en la pestaña **Actions**. Cuando termine correctamente, mostrará un círculo verde con check.
+1. La compilación tardará habitualmente entre **15 y 20 minutos** en los servidores de GitHub.
+2. Verás la ejecución en curso en la pestaña **Actions**. Cuando termine con éxito, aparecerá un icono verde de verificación (✔).
 3. Haz clic en el nombre de la ejecución completada.
-4. En la parte inferior de la página (sección **Artifacts**), encontrarás listo para descargar el archivo:
+4. En la parte inferior de la página, en la sección **Artifacts**, encontrarás listo para descargar:
    * **`windows-flutter-x86_64-exe`**
-5. Al descomprimir el archivo `.zip` descargado, obtendrás tu ejecutable final `.exe` de **Boersis Remote Desktop**.
+5. Al descomprimir el archivo `.zip` que descargas, obtendrás tu instalador y ejecutable final listo para usar: **Boersis Remote Desktop**. Al abrirlo, se conectará de inmediato a tu servidor `rd.boersis.net` con tu logotipo y la contraseña permanente predeterminada.
 
