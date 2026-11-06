@@ -17,20 +17,19 @@ Los siguientes valores ya se encuentran programados de forma nativa en el códig
 
 ---
 
-## 2. Rutas para colocar tus Imágenes y Logos
+## 2. Imágenes y Logos Instalados (Cubo Boersis)
 
-Cuando dispongas de tus recursos gráficos, reemplaza los archivos correspondientes en las siguientes rutas relativas dentro de este proyecto:
+Todos los recursos gráficos del Cubo Boersis ya fueron procesados, convertidos y colocados en sus respectivas carpetas:
 
-| Archivo / Ruta relativa | Formato / Tamaño | Descripción y Ubicación en la App |
-| :--- | :--- | :--- |
-| `flutter/windows/runner/resources/app_icon.ico` | `.ico` (Multitamaño 16x16 a 256x256) | **Icono principal** del ejecutable `.exe` y de la barra de título de la ventana de Windows. |
-| `res/icon.ico` | `.ico` (Multitamaño) | Icono secundario del instalador y empaquetador portátil de Windows. |
-| `res/icon.png` | `.png` (256x256 recomendado) | Imagen del icono en alta resolución. |
-| `res/logo.svg` | `.svg` (Vectorial) | Logotipo principal de la marca utilizado en la aplicación. |
-| `flutter/assets/icon.svg` | `.svg` (Vectorial) | Icono que se muestra dentro de la interfaz de usuario de Flutter. |
-| `res/tray-icon.ico` | `.ico` (16x16 / 32x32) | Icono que aparece en la bandeja del sistema (junto al reloj de Windows). |
-
-> **Nota:** Al sustituir los archivos, asegúrate de mantener exactamente los mismos nombres y extensiones.
+| Archivo / Ruta relativa | Formato / Tamaño | Estado | Descripción y Ubicación en la App |
+| :--- | :--- | :--- | :--- |
+| `flutter/windows/runner/resources/app_icon.ico` | `.ico` (Multitamaño 16x16 a 256x256) | ✅ Instalado | **Icono principal** del ejecutable `.exe` y de la ventana de Windows. |
+| `res/icon.ico` | `.ico` (Multitamaño 16x16 a 256x256) | ✅ Instalado | Icono secundario del instalador y ejecutable portátil. |
+| `res/tray-icon.ico` | `.ico` (16x16 y 32x32) | ✅ Instalado | Icono de la bandeja del sistema (junto al reloj de Windows). |
+| `res/icon.png` | `.png` (256x256) | ✅ Instalado | Imagen en mapa de bits de alta resolución con transparencia. |
+| `res/logo.svg` | `.svg` (Vectorial 2048x2048) | ✅ Instalado | Logotipo vectorial de la marca. |
+| `flutter/assets/icon.svg` | `.svg` (Vectorial 2048x2048) | ✅ Instalado | Icono dentro de la interfaz gráfica Flutter. |
+| `res/32x32.png`, `res/64x64.png`, `res/128x128.png`, `res/128x128@2x.png`, `res/mac-icon.png` | `.png` (Varios tamaños) | ✅ Instalado | Iconos auxiliares para empaquetado. |
 
 ---
 
@@ -84,3 +83,4 @@ Hemos creado un flujo optimizado llamado **Build Windows EXE** que compila únic
 4. En la parte inferior de la página (sección **Artifacts**), encontrarás listo para descargar el archivo:
    * **`windows-flutter-x86_64-exe`**
 5. Al descomprimir el archivo `.zip` descargado, obtendrás tu ejecutable final `.exe` de **Boersis Remote Desktop**.
+
