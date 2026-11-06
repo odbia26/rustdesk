@@ -1,0 +1,19 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload-tag:
+        description: 'Tag or version name'
+        required: false
+        default: 'custom'
+
+jobs:
+  run-windows-build:
+    uses: ./.github/workflows/flutter-build.yml
+    secrets: inherit
+    with:
+      upload-artifact: true
+      upload-tag: ${{ inputs.upload-tag }}
+      publish-update-metadata: false
+      build-windows-only: true
