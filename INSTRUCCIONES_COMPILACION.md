@@ -65,53 +65,62 @@ Todos los recursos gráficos del Cubo Boersis ya fueron procesados, convertidos 
 
 ---
 
-## 4. Subir a GitHub y Compilar
+## 4. Pasos Siguientes para Compilar tu Ejecutable
 
-Todos los archivos de código, configuración y recursos gráficos ya han sido modificados, verificados y confirmados en el historial de Git local.
+Todos los archivos de código, configuración, logos e iconos ya han sido modificados, verificados y confirmados en el historial de Git local. Para generar el archivo `.exe` con GitHub Actions, sigue estos pasos:
 
 ### Paso 1: Subir los cambios a tu repositorio en GitHub
 
-Abre una terminal (PowerShell o Git Bash) en la raíz de esta carpeta (`c:\Factor-ia\RustDesk`) y ejecuta:
+Abre una terminal (PowerShell, Símbolo del Sistema o Git Bash) en la carpeta del proyecto (`c:\Factor-ia\RustDesk`) y ejecuta:
 
 ```bash
 git push origin master
 ```
 
-> **Nota:** Si Git te solicita credenciales:
+> **Autenticación en GitHub:**
+> Si Git te pide usuario y contraseña:
 > * **Username:** Tu usuario de GitHub (`odbia26`).
-> * **Password:** Un **Personal Access Token** de GitHub (creado en *GitHub > Settings > Developer Settings > Personal access tokens* con permisos `repo` y `workflow`).
+> * **Password:** Un **Personal Access Token (classic)** de GitHub (no tu contraseña de cuenta).
+>   * Para crearlo si no lo tienes: Ve a GitHub > **Settings** (arriba a la derecha en tu perfil) > **Developer settings** > **Personal access tokens** > **Tokens (classic)** > **Generate new token**.
+>   * Asígnale los permisos `repo` y `workflow`, copia el token generado y pégalo como contraseña en la terminal.
 
 ---
 
-### Paso 2: Habilitar Permisos de Actions en GitHub
+### Paso 2: Habilitar Permisos de Escritura en GitHub Actions (Solo la primera vez)
 
-Para que GitHub Actions pueda compilar y almacenar los archivos ejecutables:
+Para que los servidores de GitHub Actions tengan permisos de guardar el ejecutable compilado:
 
 1. Ve a tu repositorio en GitHub: [https://github.com/odbia26/rustdesk](https://github.com/odbia26/rustdesk)
 2. Haz clic en la pestaña **Settings** (Configuración del repositorio).
-3. En el menú lateral izquierdo, haz clic en **Actions** > **General**.
+3. En el menú lateral izquierdo, ve a **Actions** > **General**.
 4. Desplázate hacia abajo hasta la sección **Workflow permissions**.
 5. Selecciona la opción **Read and write permissions**.
-6. Haz clic en el botón **Save** (Guardar).
+6. Haz clic en el botón verde **Save** (Guardar).
 
 ---
 
 ### Paso 3: Disparar la Compilación de Windows
 
-Hemos creado un flujo dedicado y optimizado llamado **`Build Windows EXE`** que compila únicamente la versión de Windows (ahorrando tiempo y evitando fallos con macOS o Android):
+Hemos preparado un flujo dedicado llamado **`Build Windows EXE`** que compila únicamente la versión de Windows, optimizando el tiempo:
 
-1. En la página de tu repositorio en GitHub, haz clic en la pestaña **Actions**.
-2. En la lista de flujos del panel izquierdo, selecciona: **`Build Windows EXE`**.
-3. Haz clic en el botón desplegable de la derecha: **`Run workflow`**.
-4. Asegúrate de que esté seleccionada la rama **`master`** y pulsa el botón verde **Run workflow**.
+1. En la página de tu repositorio en GitHub, entra a la pestaña **Actions**:
+   👉 [https://github.com/odbia26/rustdesk/actions](https://github.com/odbia26/rustdesk/actions)
+2. En la barra lateral izquierda, selecciona el flujo de trabajo: **`Build Windows EXE`**.
+3. En la parte derecha, haz clic en el botón desplegable **`Run workflow`**.
+4. Verifica que la rama seleccionada sea **`master`** y pulsa el botón verde **Run workflow**.
 
 ---
 
-### Paso 4: Descargar el Ejecutable Generado
+### Paso 4: Descargar el Ejecutable Generado (.exe)
 
-1. La compilación tardará habitualmente entre **15 y 20 minutos** en los servidores de GitHub.
-2. Verás la ejecución en curso en la pestaña **Actions**. Cuando termine con éxito, aparecerá un icono verde de verificación (✔).
-3. Haz clic en el nombre de la ejecución completada.
+1. El proceso de compilación tomará habitualmente entre **15 y 20 minutos** en las máquinas virtuales de GitHub.
+2. Podrás ver el progreso en tiempo real dentro de la pestaña **Actions**. Cuando termine satisfactoriamente, aparecerá una marca de verificación verde (✔).
+3. Haz clic en el nombre de la ejecución completada (por ejemplo: `Build Windows EXE #1`).
 4. En la parte inferior de la página, en la sección **Artifacts**, encontrarás listo para descargar:
    * **`windows-flutter-x86_64-exe`**
-5. Al descomprimir el archivo `.zip` que descargas, obtendrás tu instalador y ejecutable final listo para usar: **Boersis Remote Desktop**.
+5. Al hacer clic, se descargará un archivo comprimido `.zip`. Descomprímelo en tu equipo y obtendrás el instalador y ejecutable final: **Boersis Remote Desktop**.
+6. Al ejecutarlo en cualquier máquina, comprobarás que:
+   * Muestra el logotipo del **Cubo Boersis** y el icono personalizado.
+   * Se conecta automáticamente a tu servidor **`rd.boersis.net`**.
+   * Opera en modo soporte entrante con tema oscuro e idioma español.
+   * La configuración se encuentra protegida con el PIN `02518670`.
