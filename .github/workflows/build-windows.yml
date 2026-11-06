@@ -17,3 +17,4 @@ jobs:
       upload-tag: ${{ inputs.upload-tag }}
       publish-update-metadata: false
       build-windows-only: true
+
