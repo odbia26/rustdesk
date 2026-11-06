@@ -15,6 +15,9 @@ on:
       build-windows-only:
         type: boolean
         default: false
+      build-profile:
+        type: string
+        default: 'cliente'
 
 # NOTE: F-Droid builder script 'flutter/build_fdroid.sh' reads environment
 # variables from this workflow!
@@ -195,6 +198,11 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: recursive
+
+      - name: Apply Build Profile (${{ inputs.build-profile || 'cliente' }})
+        shell: powershell
+        run: |
+          python .github/scripts/apply_profile.py "${{ inputs.build-profile || 'cliente' }}"
 
       - name: Restore bridge files
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -558,7 +566,7 @@ jobs:
         if: env.UPLOAD_ARTIFACT == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: windows-flutter-${{ matrix.job.arch }}-exe
+          name: windows-flutter-${{ matrix.job.arch }}-${{ inputs.build-profile || 'cliente' }}-exe
           path: ./SignOutput/rustdesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
           if-no-files-found: error
 
@@ -613,6 +621,11 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: recursive
+
+      - name: Apply Build Profile (${{ inputs.build-profile || 'cliente' }})
+        shell: powershell
+        run: |
+          python .github/scripts/apply_profile.py "${{ inputs.build-profile || 'cliente' }}"
 
       - name: Install LLVM and Clang
         uses: rustdesk-org/install-llvm-action-32bit@6aa7d9ad3df84dff01cd4596dd0fc880a7f47fce # no release tag; commit 2026-05-26
@@ -825,6 +838,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Apply Build Profile (${{ inputs.build-profile || 'cliente' }})
+        shell: powershell
+        run: |
+          python .github/scripts/apply_profile.py "${{ inputs.build-profile || 'cliente' }}"
+
       - name: Install flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
@@ -954,6 +972,11 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: recursive
+
+      - name: Apply Build Profile (${{ inputs.build-profile || 'cliente' }})
+        shell: powershell
+        run: |
+          python .github/scripts/apply_profile.py "${{ inputs.build-profile || 'cliente' }}"
 
       - name: Import the codesign cert
         if: env.MACOS_P12_BASE64 != null
@@ -1489,6 +1512,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Apply Build Profile (${{ inputs.build-profile || 'cliente' }})
+        shell: powershell
+        run: |
+          python .github/scripts/apply_profile.py "${{ inputs.build-profile || 'cliente' }}"
+
       - name: Install flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
@@ -1762,6 +1790,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Apply Build Profile (${{ inputs.build-profile || 'cliente' }})
+        shell: powershell
+        run: |
+          python .github/scripts/apply_profile.py "${{ inputs.build-profile || 'cliente' }}"
+
       - name: Install flutter
         uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
@@ -1929,6 +1962,11 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: recursive
+
+      - name: Apply Build Profile (${{ inputs.build-profile || 'cliente' }})
+        shell: powershell
+        run: |
+          python .github/scripts/apply_profile.py "${{ inputs.build-profile || 'cliente' }}"
 
       - name: Set Swap Space
         uses: pierotofy/set-swap-space@49819abfb41bd9b44fb781159c033dba90353a7c # v1.0
@@ -2256,6 +2294,11 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: recursive
+
+      - name: Apply Build Profile (${{ inputs.build-profile || 'cliente' }})
+        shell: powershell
+        run: |
+          python .github/scripts/apply_profile.py "${{ inputs.build-profile || 'cliente' }}"
 
       - name: Set Swap Space
         uses: pierotofy/set-swap-space@49819abfb41bd9b44fb781159c033dba90353a7c # v1.0
@@ -2593,6 +2636,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Apply Build Profile (${{ inputs.build-profile || 'cliente' }})
+        shell: powershell
+        run: |
+          python .github/scripts/apply_profile.py "${{ inputs.build-profile || 'cliente' }}"
+
       - name: Modify vcpkg.json for armv7
         if: matrix.job.vcpkg-triplet == 'arm-linux'
         run: |
@@ -2810,6 +2858,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Apply Build Profile (${{ inputs.build-profile || 'cliente' }})
+        shell: powershell
+        run: |
+          python .github/scripts/apply_profile.py "${{ inputs.build-profile || 'cliente' }}"
+
       - name: Download Binary
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -2886,6 +2939,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Apply Build Profile (${{ inputs.build-profile || 'cliente' }})
+        shell: powershell
+        run: |
+          python .github/scripts/apply_profile.py "${{ inputs.build-profile || 'cliente' }}"
+
       - name: Download Binary
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -2947,6 +3005,11 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: recursive
+
+      - name: Apply Build Profile (${{ inputs.build-profile || 'cliente' }})
+        shell: powershell
+        run: |
+          python .github/scripts/apply_profile.py "${{ inputs.build-profile || 'cliente' }}"
 
       - name: Prepare env
         run: |

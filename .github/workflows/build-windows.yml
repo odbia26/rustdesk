@@ -3,6 +3,14 @@ name: Build Windows EXE
 on:
   workflow_dispatch:
     inputs:
+      build-profile:
+        description: 'Versión a compilar (cliente: solo entrante con PIN | operador: bidireccional completo)'
+        required: true
+        type: choice
+        default: 'cliente'
+        options:
+          - cliente
+          - operador
       upload-tag:
         description: 'Tag or version name'
         required: false
@@ -17,4 +25,4 @@ jobs:
       upload-tag: ${{ inputs.upload-tag }}
       publish-update-metadata: false
       build-windows-only: true
-
+      build-profile: ${{ inputs.build-profile }}

@@ -99,15 +99,20 @@ Para que los servidores de GitHub Actions tengan permisos de guardar el ejecutab
 
 ---
 
-### Paso 3: Disparar la Compilación de Windows
+### Paso 3: Disparar la Compilación y Escoger la Versión
 
-Hemos preparado un flujo dedicado llamado **`Build Windows EXE`** que compila únicamente la versión de Windows, optimizando el tiempo:
+Hemos preparado un flujo dedicado llamado **`Build Windows EXE`** con un selector desplegable para elegir qué variante compilar:
 
 1. En la página de tu repositorio en GitHub, entra a la pestaña **Actions**:
    👉 [https://github.com/odbia26/rustdesk/actions](https://github.com/odbia26/rustdesk/actions)
 2. En la barra lateral izquierda, selecciona el flujo de trabajo: **`Build Windows EXE`**.
 3. En la parte derecha, haz clic en el botón desplegable **`Run workflow`**.
-4. Verifica que la rama seleccionada sea **`master`** y pulsa el botón verde **Run workflow**.
+4. Verás las opciones:
+   * **Rama:** Deja seleccionada `master`.
+   * **Versión a compilar (desplegable):**
+     * **`cliente`** *(Opción predeterminada)*: Genera la versión de soporte para clientes (solo entrante, protegida con el PIN `02518670`, servicio automático de Windows).
+     * **`operador`**: Genera la versión completa bidireccional para el técnico (permite conectarse y controlar clientes, panel de control completo, sin bloqueo solo-entrante).
+5. Pulsa el botón verde **Run workflow**.
 
 ---
 
@@ -116,11 +121,12 @@ Hemos preparado un flujo dedicado llamado **`Build Windows EXE`** que compila ú
 1. El proceso de compilación tomará habitualmente entre **15 y 20 minutos** en las máquinas virtuales de GitHub.
 2. Podrás ver el progreso en tiempo real dentro de la pestaña **Actions**. Cuando termine satisfactoriamente, aparecerá una marca de verificación verde (✔).
 3. Haz clic en el nombre de la ejecución completada (por ejemplo: `Build Windows EXE #1`).
-4. En la parte inferior de la página, en la sección **Artifacts**, encontrarás listo para descargar:
-   * **`windows-flutter-x86_64-exe`**
+4. En la parte inferior de la página, en la sección **Artifacts**, encontrarás listo para descargar según la versión que escogiste:
+   * **`windows-flutter-x86_64-cliente-exe`** (si compilaste la versión Cliente).
+   * **`windows-flutter-x86_64-operador-exe`** (si compilaste la versión Operador).
 5. Al hacer clic, se descargará un archivo comprimido `.zip`. Descomprímelo en tu equipo y obtendrás el instalador y ejecutable final: **Boersis Remote Desktop**.
 6. Al ejecutarlo en cualquier máquina, comprobarás que:
    * Muestra el logotipo del **Cubo Boersis** y el icono personalizado.
    * Se conecta automáticamente a tu servidor **`rd.boersis.net`**.
-   * Opera en modo soporte entrante con tema oscuro e idioma español.
-   * La configuración se encuentra protegida con el PIN `02518670`.
+   * Si es la versión **cliente**: opera en modo solo entrante protegido por PIN.
+   * Si es la versión **operador**: opera en modo completo con control remoto saliente hacia tus clientes.
