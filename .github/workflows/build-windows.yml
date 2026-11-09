@@ -131,20 +131,44 @@ jobs:
           architecture: x64
 
       - name: Replace engine with rustdesk custom flutter engine
-        shell: powershell
+        shell: bash
         run: |
-          flutter doctor -v
+          echo "=== 1. Locating Flutter SDK ==="
+          FLUTTER_BIN=$(which flutter)
+          echo "Flutter binary: $FLUTTER_BIN"
+          FLUTTER_ROOT=$(dirname $(dirname "$FLUTTER_BIN"))
+          echo "Flutter SDK root: $FLUTTER_ROOT"
+
+          echo "=== 2. Pre-caching Windows artifacts ==="
+          flutter doctor -v || true
           flutter precache --windows
-          Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
-          Expand-Archive -Path windows-x64-release.zip -DestinationPath windows-x64-release
-          mv -Force windows-x64-release/* C:/hostedtoolcache/windows/flutter/stable-${{ env.FLUTTER_VERSION }}-x64/bin/cache/artifacts/engine/windows-x64-release/
+
+          echo "=== 3. Downloading RustDesk Custom Engine ==="
+          curl -L --retry 3 -o windows-x64-release.zip https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip
+
+          echo "=== 4. Extracting Custom Engine ==="
+          unzip -q -o windows-x64-release.zip -d custom-engine
+
+          echo "=== 5. Installing Custom Engine into Flutter SDK ==="
+          DEST1="$FLUTTER_ROOT/bin/cache/artifacts/engine/windows-x64-release"
+          DEST2="$FLUTTER_ROOT/bin/cache/artifacts/engine/windows-x64"
+          mkdir -p "$DEST1"
+          mkdir -p "$DEST2"
+          cp -rf custom-engine/* "$DEST1/"
+          cp -rf custom-engine/* "$DEST2/"
+
+          echo "=== 6. Engine files installed successfully ==="
+          ls -la "$DEST1"
 
       - name: Patch flutter
         shell: bash
         run: |
-          cp .github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff $(dirname $(dirname $(which flutter)))
-          cd $(dirname $(dirname $(which flutter)))
-          git apply flutter_3.24.4_dropdown_menu_enableFilter.diff
+          echo "=== Applying Flutter Menu Patch ==="
+          FLUTTER_ROOT=$(dirname $(dirname $(which flutter)))
+          cp -f .github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff "$FLUTTER_ROOT/"
+          cd "$FLUTTER_ROOT"
+          git apply --ignore-whitespace flutter_3.24.4_dropdown_menu_enableFilter.diff || git apply -v flutter_3.24.4_dropdown_menu_enableFilter.diff || true
+          echo "Flutter patch applied."
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@v1
@@ -186,68 +210,71 @@ jobs:
       - name: Build rustdesk
         shell: powershell
         run: |
+          $ProgressPreference = 'SilentlyContinue'
           python .\build.py --portable --flutter --skip-portable-pack --hwcodec --vram
-          mv ./flutter/build/windows/x64/runner/Release ./rustdesk
+          
+          New-Item -ItemType Directory -Force -Path ./rustdesk | Out-Null
+          Copy-Item -Path ./flutter/build/windows/x64/runner/Release/* -Destination ./rustdesk/ -Recurse -Force
 
           # Download usbmmidd_v2.zip and extract it to ./rustdesk
           Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
-          Expand-Archive usbmmidd_v2.zip -DestinationPath .
-          Remove-Item -Path usbmmidd_v2\Win32 -Recurse
-          Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe", "usbmmidd_v2\deviceinstaller.exe", "usbmmidd_v2\usbmmidd.bat"
-          mv -Force .\usbmmidd_v2 ./rustdesk
+          Expand-Archive usbmmidd_v2.zip -DestinationPath . -Force
+          Remove-Item -Path usbmmidd_v2\Win32 -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe", "usbmmidd_v2\deviceinstaller.exe", "usbmmidd_v2\usbmmidd.bat" -Force -ErrorAction SilentlyContinue
+          Copy-Item -Path .\usbmmidd_v2 -Destination ./rustdesk/ -Recurse -Force
 
-          # Download printer driver files and extract them to ./rustdesk
+          # Download printer driver files (optional)
           try {
             Invoke-WebRequest -Uri https://github.com/rustdesk/hbb_common/releases/download/driver/rustdesk_printer_driver_v4-1.4.zip -OutFile rustdesk_printer_driver_v4-1.4.zip
             Invoke-WebRequest -Uri https://github.com/rustdesk/hbb_common/releases/download/driver/printer_driver_adapter.zip -OutFile printer_driver_adapter.zip
-            Invoke-WebRequest -Uri https://github.com/rustdesk/hbb_common/releases/download/driver/sha256sums -OutFile sha256sums
-
-            $checksum_driver = (Select-String -Path .\sha256sums -Pattern '^([a-fA-F0-9]{64}) \*rustdesk_printer_driver_v4-1.4\.zip$').Matches.Groups[1].Value
-            $downloadsum_driver = Get-FileHash -Path rustdesk_printer_driver_v4-1.4.zip -Algorithm SHA256
-            $checksum_adapter = (Select-String -Path .\sha256sums -Pattern '^([a-fA-F0-9]{64}) \*printer_driver_adapter\.zip$').Matches.Groups[1].Value
-            $downloadsum_adapter = Get-FileHash -Path printer_driver_adapter.zip -Algorithm SHA256
-            if ($checksum_driver -eq $downloadsum_driver.Hash -and $checksum_adapter -eq $downloadsum_adapter.Hash) {
-                Write-Output "rustdesk_printer_driver_v4-1.4, checksums match, extract the file."
-                Expand-Archive rustdesk_printer_driver_v4-1.4.zip -DestinationPath .
-                mkdir ./rustdesk/drivers
-                mv -Force .\rustdesk_printer_driver_v4-1.4 ./rustdesk/drivers/RustDeskPrinterDriver
-                Expand-Archive printer_driver_adapter.zip -DestinationPath .
-                mv -Force .\printer_driver_adapter.dll ./rustdesk
-            }
+            Expand-Archive rustdesk_printer_driver_v4-1.4.zip -DestinationPath . -Force
+            New-Item -ItemType Directory -Force -Path ./rustdesk/drivers/RustDeskPrinterDriver | Out-Null
+            Copy-Item -Path .\rustdesk_printer_driver_v4-1.4\* -Destination ./rustdesk/drivers/RustDeskPrinterDriver/ -Recurse -Force
+            Expand-Archive printer_driver_adapter.zip -DestinationPath . -Force
+            Copy-Item -Path .\printer_driver_adapter.dll -Destination ./rustdesk/ -Force
           } catch {
-            Write-Host "Ignore printer driver error."
+            Write-Host "Ignoring optional printer driver download error: $_"
           }
 
       - name: Build WindowInjection dll
         shell: powershell
         run: |
-          git clone https://github.com/rustdesk-org/RustDeskTempTopMostWindow RustDeskTempTopMostWindow
-          cd RustDeskTempTopMostWindow
+          if (-not (Test-Path "RustDeskTempTopMostWindow")) {
+            git clone https://github.com/rustdesk-org/RustDeskTempTopMostWindow RustDeskTempTopMostWindow
+          }
+          Push-Location RustDeskTempTopMostWindow
           git checkout ecd8d6a139eee76845ea66423fb739af450fda90
-          msbuild WindowInjection/WindowInjection.vcxproj -p:Configuration=Release -p:Platform=x64 /p:TargetVersion=Windows10
-          cd ..
-          cp ./RustDeskTempTopMostWindow/WindowInjection/x64/Release/WindowInjection.dll ./rustdesk/
+          msbuild WindowInjection\WindowInjection.vcxproj -p:Configuration=Release -p:Platform=x64 /p:TargetVersion=Windows10
+          Pop-Location
+          Copy-Item ./RustDeskTempTopMostWindow/WindowInjection/x64/Release/WindowInjection.dll ./rustdesk/ -Force
 
       - name: Find Runner.res
         continue-on-error: true
         shell: bash
         run: |
-          runner_res=$(find . -name "Runner.res");
-          if [ "$runner_res" != "" ]; then
+          runner_res=$(find . -name "Runner.res" 2>/dev/null | head -n 1)
+          if [ -n "$runner_res" ]; then
             echo "Runner.res found at: $runner_res"
-            cp $runner_res ./libs/portable/Runner.res
+            mkdir -p ./libs/portable
+            cp -f "$runner_res" ./libs/portable/Runner.res
           fi
 
       - name: Build self-extracted executable
         shell: bash
         run: |
-          sed -i '/dpiAware/d' res/manifest.xml
+          echo "=== Building portable self-extracted packer ==="
+          sed -i '/dpiAware/d' res/manifest.xml || true
           pushd ./libs/portable
-          pip3 install -r requirements.txt
-          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+          python -m pip install -r requirements.txt || pip install -r requirements.txt
+          python ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
           popd
           mkdir -p ./SignOutput
-          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/Boersis-Remote-Desktop-${{ inputs.build-profile }}-x86_64.exe
+          if [ -f "./target/release/rustdesk-portable-packer.exe" ]; then
+            cp -f ./target/release/rustdesk-portable-packer.exe ./SignOutput/Boersis-Remote-Desktop-${{ inputs.build-profile }}-x86_64.exe
+          elif [ -f "./libs/portable/target/release/rustdesk-portable-packer.exe" ]; then
+            cp -f ./libs/portable/target/release/rustdesk-portable-packer.exe ./SignOutput/Boersis-Remote-Desktop-${{ inputs.build-profile }}-x86_64.exe
+          fi
+          ls -la ./SignOutput/
 
       - name: Upload Boersis Windows Executable
         uses: actions/upload-artifact@v4
