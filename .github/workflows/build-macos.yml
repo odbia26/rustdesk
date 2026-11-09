@@ -11,14 +11,6 @@ on:
         options:
           - cliente
           - operador
-      arch:
-        description: 'Arquitectura de Mac'
-        required: true
-        type: choice
-        default: 'arm64 (Apple Silicon M1/M2/M3/M4)'
-        options:
-          - 'arm64 (Apple Silicon M1/M2/M3/M4)'
-          - 'x86_64 (Intel)'
 
 permissions:
   contents: read
@@ -26,11 +18,11 @@ permissions:
 env:
   VERSION: "1.5.1"
   MAC_RUST_VERSION: "1.81"
-  FLUTTER_VERSION: "3.24.5"
   FLUTTER_MACOS_ARM_VERSION: "3.44.9"
   CARGO_EXPAND_VERSION: "1.0.95"
   FLUTTER_RUST_BRIDGE_VERSION: "1.80.1"
   VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
 jobs:
   generate-bridge:
@@ -69,7 +61,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: ${{ inputs.arch == 'x86_64 (Intel)' && '3.22.3' || '3.44.8' }}
+          flutter-version: "3.44.8"
           cache: true
 
       - name: Install flutter rust bridge deps
@@ -77,11 +69,7 @@ jobs:
         run: |
           cargo install cargo-expand --version ${{ env.CARGO_EXPAND_VERSION }} --locked
           cargo install flutter_rust_bridge_codegen --version ${{ env.FLUTTER_RUST_BRIDGE_VERSION }} --features "uuid" --locked
-          if [ "${{ inputs.arch }}" == "x86_64 (Intel)" ]; then
-            sed -i -e 's/extended_text: 14.0.0/extended_text: 13.0.0/g' flutter/pubspec.yaml
-          else
-            bash .github/patches/apply_flutter_3.44_source_patches.sh
-          fi
+          bash .github/patches/apply_flutter_3.44_source_patches.sh
           pushd flutter && flutter pub get && popd
 
       - name: Run flutter rust bridge
@@ -104,8 +92,15 @@ jobs:
   build-macos:
     name: Build macOS DMG (${{ inputs.build-profile }})
     needs: [generate-bridge]
-    runs-on: ${{ inputs.arch == 'x86_64 (Intel)' && 'macos-13' || 'macos-14' }}
+    runs-on: macos-15
     steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
       - name: Checkout source code
         uses: actions/checkout@v4
 
@@ -123,29 +118,23 @@ jobs:
       - name: Install build runtime
         shell: bash
         run: |
-          brew install llvm create-dmg
+          brew install llvm create-dmg gnu-sed
           if ! command -v pkg-config &>/dev/null; then
             brew install pkg-config
           fi
+          echo "$(brew --prefix gnu-sed)/libexec/gnubin" >> "$GITHUB_PATH"
 
       - name: Install flutter
         uses: subosito/flutter-action@v2
         with:
           channel: "stable"
-          flutter-version: ${{ inputs.arch == 'x86_64 (Intel)' && env.FLUTTER_VERSION || env.FLUTTER_MACOS_ARM_VERSION }}
+          flutter-version: ${{ env.FLUTTER_MACOS_ARM_VERSION }}
 
       - name: Configure Flutter for macOS
         shell: bash
         run: |
-          if [ "${{ inputs.arch }}" != "x86_64 (Intel)" ]; then
-            flutter config --no-enable-swift-package-manager
-            brew install gnu-sed
-            export PATH="$(brew --prefix gnu-sed)/libexec/gnubin:$PATH"
-            bash .github/patches/apply_flutter_3.44_source_patches.sh
-          else
-            cd "$(dirname "$(dirname "$(which flutter)")")"
-            git apply ${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff || true
-          fi
+          flutter config --no-enable-swift-package-manager
+          bash .github/patches/apply_flutter_3.44_source_patches.sh
           
           # Scheduler binding fix
           cd "$(dirname "$(which flutter)")"
@@ -155,12 +144,12 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.MAC_RUST_VERSION }}
-          targets: ${{ inputs.arch == 'x86_64 (Intel)' && 'x86_64-apple-darwin' || 'aarch64-apple-darwin' }}
+          targets: aarch64-apple-darwin
           components: "rustfmt"
 
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: ${{ inputs.arch == 'x86_64 (Intel)' && 'macos-13' || 'macos-14' }}
+          prefix-key: macos-15
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
@@ -170,8 +159,10 @@ jobs:
 
       - name: Install vcpkg dependencies
         shell: bash
+        env:
+          VCPKG_DEFAULT_HOST_TRIPLET: arm64-osx
         run: |
-          if ! $VCPKG_ROOT/vcpkg install --x-install-root="$VCPKG_ROOT/installed"; then
+          if ! $VCPKG_ROOT/vcpkg install --triplet arm64-osx --x-install-root="$VCPKG_ROOT/installed"; then
             find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
               echo "$_1:"
               echo "======"
@@ -185,28 +176,24 @@ jobs:
       - name: Build Boersis macOS app
         shell: bash
         run: |
-          if [ "${{ inputs.arch }}" != "x86_64 (Intel)" ]; then
-            MIN_MACOS_VERSION="12.3"
-            sed -i -e "s/MACOSX_DEPLOYMENT_TARGET\=[0-9]*.[0-9]*/MACOSX_DEPLOYMENT_TARGET=${MIN_MACOS_VERSION}/" build.py
-            sed -i -e "s/platform :osx, '.*'/platform :osx, '${MIN_MACOS_VERSION}'/" flutter/macos/Podfile
-            sed -i -e "s/osx_minimum_system_version = \"[0-9]*.[0-9]*\"/osx_minimum_system_version = \"${MIN_MACOS_VERSION}\"/" Cargo.toml
-            sed -i -e "s/MACOSX_DEPLOYMENT_TARGET = [0-9]*.[0-9]*;/MACOSX_DEPLOYMENT_TARGET = ${MIN_MACOS_VERSION};/" flutter/macos/Runner.xcodeproj/project.pbxproj
-            export MACOSX_DEPLOYMENT_TARGET="${MIN_MACOS_VERSION}"
-            ./build.py --flutter --hwcodec --unix-file-copy-paste --screencapturekit
-          else
-            ./build.py --flutter --hwcodec --unix-file-copy-paste
-          fi
+          MIN_MACOS_VERSION="12.3"
+          sed -i -e "s/MACOSX_DEPLOYMENT_TARGET\=[0-9]*.[0-9]*/MACOSX_DEPLOYMENT_TARGET=${MIN_MACOS_VERSION}/" build.py
+          sed -i -e "s/platform :osx, '.*'/platform :osx, '${MIN_MACOS_VERSION}'/" flutter/macos/Podfile
+          sed -i -e "s/osx_minimum_system_version = \"[0-9]*.[0-9]*\"/osx_minimum_system_version = \"${MIN_MACOS_VERSION}\"/" Cargo.toml
+          sed -i -e "s/MACOSX_DEPLOYMENT_TARGET = [0-9]*.[0-9]*;/MACOSX_DEPLOYMENT_TARGET = ${MIN_MACOS_VERSION};/" flutter/macos/Runner.xcodeproj/project.pbxproj
+          export MACOSX_DEPLOYMENT_TARGET="${MIN_MACOS_VERSION}"
+          ./build.py --flutter --hwcodec --unix-file-copy-paste --screencapturekit
 
       - name: Create Boersis DMG installer
         shell: bash
         run: |
           CREATE_DMG="$(command -v create-dmg)"
-          CREATE_DMG="$(readlink -f "$CREATE_DMG")"
-          sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG" || true
+          CREATE_DMG="$(readlink -f "$CREATE_DMG" || which create-dmg)"
+          sed -i 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG" || true
 
-          TARGET_ARCH="${{ inputs.arch == 'x86_64 (Intel)' && 'x86_64' || 'arm64' }}"
-          DMG_FILE="Boersis-Remote-Desktop-${{ inputs.build-profile }}-${TARGET_ARCH}.dmg"
-          
+          DMG_FILE="Boersis-Remote-Desktop-${{ inputs.build-profile }}-arm64.dmg"
+          rm -f "$DMG_FILE"
+
           create-dmg \
             --volname "Boersis Remote Desktop" \
             --window-pos 200 120 \
@@ -216,13 +203,18 @@ jobs:
             --hide-extension "RustDesk.app" \
             --app-drop-link 600 185 \
             "$DMG_FILE" \
-            ./flutter/build/macos/Build/Products/Release/RustDesk.app
+            ./flutter/build/macos/Build/Products/Release/RustDesk.app || true
+
+          if [ ! -f "$DMG_FILE" ]; then
+            echo "create-dmg not produced, fallback to native hdiutil"
+            hdiutil create -volname "Boersis Remote Desktop" -srcfolder ./flutter/build/macos/Build/Products/Release/RustDesk.app -ov -format UDZO "$DMG_FILE"
+          fi
 
           ls -lh "$DMG_FILE"
 
       - name: Upload Boersis macOS DMG
         uses: actions/upload-artifact@v4
         with:
-          name: Boersis-Remote-Desktop-${{ inputs.build-profile }}-${{ inputs.arch == 'x86_64 (Intel)' && 'x86_64' || 'arm64' }}-dmg
-          path: Boersis-Remote-Desktop-${{ inputs.build-profile }}-*.dmg
+          name: Boersis-Remote-Desktop-${{ inputs.build-profile }}-arm64-dmg
+          path: Boersis-Remote-Desktop-${{ inputs.build-profile }}-arm64.dmg
           if-no-files-found: error
