@@ -9,12 +9,20 @@ print(f"[apply_profile] Applying build profile: '{profile}'")
 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 config_rs = os.path.join(base_dir, "libs", "hbb_common", "src", "config.rs")
 runner_rc = os.path.join(base_dir, "flutter", "windows", "runner", "Runner.rc")
+info_plist = os.path.join(base_dir, "flutter", "macos", "Runner", "Info.plist")
 
 with open(config_rs, "r", encoding="utf-8") as f:
     config_content = f.read()
 
-with open(runner_rc, "r", encoding="utf-8") as f:
-    runner_content = f.read()
+runner_content = ""
+if os.path.exists(runner_rc):
+    with open(runner_rc, "r", encoding="utf-8") as f:
+        runner_content = f.read()
+
+plist_content = ""
+if os.path.exists(info_plist):
+    with open(info_plist, "r", encoding="utf-8") as f:
+        plist_content = f.read()
 
 if profile == "operador":
     # 1. Modo Bidireccional (permite conexiones salientes hacia clientes)
@@ -47,15 +55,21 @@ if profile == "operador":
         r'\g<1>false)',
         config_content
     )
-    # 4. Actualizar descripción en Runner.rc
-    runner_content = runner_content.replace(
-        'VALUE "FileDescription", "Boersis Remote Desktop" "\\0"',
-        'VALUE "FileDescription", "Boersis Remote Desktop - Operador" "\\0"'
-    )
-    runner_content = runner_content.replace(
-        'VALUE "FileDescription", "Boersis Remote Desktop - Soporte" "\\0"',
-        'VALUE "FileDescription", "Boersis Remote Desktop - Operador" "\\0"'
-    )
+    # 4. Actualizar descripción en Runner.rc e Info.plist
+    if runner_content:
+        runner_content = runner_content.replace(
+            'VALUE "FileDescription", "Boersis Remote Desktop" "\\0"',
+            'VALUE "FileDescription", "Boersis Remote Desktop - Operador" "\\0"'
+        )
+        runner_content = runner_content.replace(
+            'VALUE "FileDescription", "Boersis Remote Desktop - Soporte" "\\0"',
+            'VALUE "FileDescription", "Boersis Remote Desktop - Operador" "\\0"'
+        )
+    if plist_content:
+        plist_content = plist_content.replace(
+            "<string>Boersis Remote Desktop</string>",
+            "<string>Boersis Remote Desktop - Operador</string>"
+        )
 
 elif profile == "cliente":
     # 1. Modo Solo Entrante (Soporte)
@@ -91,20 +105,31 @@ elif profile == "cliente":
         r'\g<1>true)',
         config_content
     )
-    # 4. Actualizar descripción en Runner.rc
-    runner_content = runner_content.replace(
-        'VALUE "FileDescription", "Boersis Remote Desktop" "\\0"',
-        'VALUE "FileDescription", "Boersis Remote Desktop - Soporte" "\\0"'
-    )
-    runner_content = runner_content.replace(
-        'VALUE "FileDescription", "Boersis Remote Desktop - Operador" "\\0"',
-        'VALUE "FileDescription", "Boersis Remote Desktop - Soporte" "\\0"'
-    )
+    # 4. Actualizar descripción en Runner.rc e Info.plist
+    if runner_content:
+        runner_content = runner_content.replace(
+            'VALUE "FileDescription", "Boersis Remote Desktop" "\\0"',
+            'VALUE "FileDescription", "Boersis Remote Desktop - Soporte" "\\0"'
+        )
+        runner_content = runner_content.replace(
+            'VALUE "FileDescription", "Boersis Remote Desktop - Operador" "\\0"',
+            'VALUE "FileDescription", "Boersis Remote Desktop - Soporte" "\\0"'
+        )
+    if plist_content:
+        plist_content = plist_content.replace(
+            "<string>Boersis Remote Desktop - Operador</string>",
+            "<string>Boersis Remote Desktop</string>"
+        )
 
 with open(config_rs, "w", encoding="utf-8") as f:
     f.write(config_content)
 
-with open(runner_rc, "w", encoding="utf-8") as f:
-    f.write(runner_content)
+if runner_content and os.path.exists(runner_rc):
+    with open(runner_rc, "w", encoding="utf-8") as f:
+        f.write(runner_content)
+
+if plist_content and os.path.exists(info_plist):
+    with open(info_plist, "w", encoding="utf-8") as f:
+        f.write(plist_content)
 
 print(f"[apply_profile] Successfully configured profile '{profile}'.")

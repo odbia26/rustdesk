@@ -130,3 +130,28 @@ Hemos preparado un flujo dedicado llamado **`Build Windows EXE`** con un selecto
    * Se conecta automáticamente a tu servidor **`rd.boersis.net`**.
    * Si es la versión **cliente**: opera en modo solo entrante protegido por PIN.
    * Si es la versión **operador**: opera en modo completo con control remoto saliente hacia tus clientes.
+
+---
+
+## 5. Compilación del Instalador para Mac (.dmg)
+
+Para generar el instalador de macOS con toda la personalización y marca Boersis:
+
+1. Ve a la pestaña **Actions** en tu repositorio:
+   👉 [https://github.com/odbia26/rustdesk/actions](https://github.com/odbia26/rustdesk/actions)
+2. En la barra lateral izquierda, selecciona el flujo: **`Build macOS DMG`**.
+3. Haz clic en **`Run workflow`**.
+4. Verás las opciones:
+   * **Versión a compilar:**
+     * **`cliente`** *(Opción predeterminada)*: Versión de solo soporte técnico para el usuario final (bloqueada con el PIN `02518670`).
+     * **`operador`**: Versión completa bidireccional para el técnico.
+   * **Arquitectura de Mac:**
+     * **`arm64 (Apple Silicon M1/M2/M3/M4)`** *(Recomendada, para todas las Macs desde finales de 2020)*.
+     * **`x86_64 (Intel)`** *(Para Macs antiguas anteriores a 2020)*.
+5. Pulsa el botón verde **Run workflow**.
+6. Al finalizar la compilación, en la sección **Artifacts** encontrarás el archivo `.zip` con el instalador de disco:
+   * **`Boersis-Remote-Desktop-cliente-arm64-dmg`** (o `x86_64`).
+7. Al descomprimirlo obtendrás el archivo **`.dmg`**. En Mac, el usuario lo abre y arrastra la aplicación a su carpeta de *Aplicaciones*.
+8. **Nota de seguridad en macOS:**
+   * La primera vez que el usuario abra la app, debe hacer **Clic derecho > Abrir** (Open) si macOS muestra el aviso de Gatekeeper (*desarrollador no verificado*).
+   * En *Ajustes del Sistema > Privacidad y Seguridad*, el cliente debe habilitar los permisos de **Grabación de pantalla** y **Accesibilidad** para permitir la sesión de soporte remoto.
