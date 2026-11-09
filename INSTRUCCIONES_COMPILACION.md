@@ -122,8 +122,8 @@ Hemos preparado un flujo dedicado llamado **`Build Windows EXE`** con un selecto
 2. Podrás ver el progreso en tiempo real dentro de la pestaña **Actions**. Cuando termine satisfactoriamente, aparecerá una marca de verificación verde (✔).
 3. Haz clic en el nombre de la ejecución completada (por ejemplo: `Build Windows EXE #1`).
 4. En la parte inferior de la página, en la sección **Artifacts**, encontrarás listo para descargar según la versión que escogiste:
-   * **`windows-flutter-x86_64-cliente-exe`** (si compilaste la versión Cliente).
-   * **`windows-flutter-x86_64-operador-exe`** (si compilaste la versión Operador).
+   * **`Boersis-Remote-Desktop-cliente-x86_64`** (si compilaste la versión Cliente).
+   * **`Boersis-Remote-Desktop-operador-x86_64`** (si compilaste la versión Operador).
 5. Al hacer clic, se descargará un archivo comprimido `.zip`. Descomprímelo en tu equipo y obtendrás el instalador y ejecutable final: **Boersis Remote Desktop**.
 6. Al ejecutarlo en cualquier máquina, comprobarás que:
    * Muestra el logotipo del **Cubo Boersis** y el icono personalizado.
