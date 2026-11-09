@@ -124,6 +124,18 @@ jobs:
           fi
           echo "$(brew --prefix gnu-sed)/libexec/gnubin" >> "$GITHUB_PATH"
 
+      - name: Install NASM
+        shell: bash
+        run: |
+          curl -L --retry 3 -o nasm.zip https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/macosx/nasm-2.16.03-macosx.zip
+          unzip -q -o nasm.zip
+          chmod +x nasm-2.16.03/nasm
+          sudo cp -f nasm-2.16.03/nasm /usr/local/bin/nasm || true
+          sudo cp -f nasm-2.16.03/nasm /opt/homebrew/bin/nasm || true
+          echo "$PWD/nasm-2.16.03" >> "$GITHUB_PATH"
+          export PATH="$PWD/nasm-2.16.03:$PATH"
+          nasm --version
+
       - name: Install flutter
         uses: subosito/flutter-action@v2
         with:
