@@ -1521,10 +1521,22 @@ pub fn copy_raw_cmd(src_raw: &str, _raw: &str, _path: &str) -> ResultType<String
 
 pub fn copy_exe_cmd(src_exe: &str, exe: &str, path: &str) -> ResultType<String> {
     let main_exe = copy_raw_cmd(src_exe, exe, path)?;
+    let app_name = crate::get_app_name();
+    let src_exe_filename = PathBuf::from(src_exe)
+        .file_name()
+        .map(|f| f.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let rename_src = if !src_exe_filename.is_empty() && !src_exe_filename.eq_ignore_ascii_case(&format!("{app_name}.exe")) {
+        format!("if exist \"{path}\\{src_exe_filename}\" move /Y \"{path}\\{src_exe_filename}\" \"{path}\\{app_name}.exe\"\r\n")
+    } else {
+        String::new()
+    };
     Ok(format!(
         "
         {main_exe}
         copy /Y \"{ORIGIN_PROCESS_EXE}\" \"{path}\\{broker_exe}\"
+        if exist \"{path}\\rustdesk.exe\" if not exist \"{path}\\{app_name}.exe\" move /Y \"{path}\\rustdesk.exe\" \"{path}\\{app_name}.exe\"
+        {rename_src}
         ",
         ORIGIN_PROCESS_EXE = win_topmost_window::ORIGIN_PROCESS_EXE,
         broker_exe = win_topmost_window::INJECTED_PROCESS_EXE,
@@ -1539,15 +1551,17 @@ pub fn rename_exe_cmd(src_exe: &str, path: &str) -> ResultType<String> {
         .to_string_lossy()
         .to_string();
     let app_name = crate::get_app_name();
-    if src_exe_filename == format!("{app_name}.exe") {
-        Ok("".to_owned())
+    let rename_src = if !src_exe_filename.eq_ignore_ascii_case(&format!("{app_name}.exe")) {
+        format!("if exist \"{path}\\{src_exe_filename}\" move /Y \"{path}\\{src_exe_filename}\" \"{path}\\{app_name}.exe\"\r\n")
     } else {
-        Ok(format!(
-            "
-        move /Y \"{path}\\{src_exe_filename}\" \"{path}\\{app_name}.exe\"
+        String::new()
+    };
+    Ok(format!(
+        "
+        if exist \"{path}\\rustdesk.exe\" if not exist \"{path}\\{app_name}.exe\" move /Y \"{path}\\rustdesk.exe\" \"{path}\\{app_name}.exe\"
+        {rename_src}
         ",
-        ))
-    }
+    ))
 }
 
 #[inline]
@@ -1853,6 +1867,7 @@ fn get_before_uninstall(kill_self: bool) -> ResultType<String> {
     {remove_service}
     taskkill /F /IM {broker_exe}
     taskkill /F /IM \"{app_name}.exe\"{filter}
+    taskkill /F /IM rustdesk.exe{filter}
     reg delete HKEY_CLASSES_ROOT\\.{ext} /f
     reg delete HKEY_CLASSES_ROOT\\{ext} /f
     netsh advfirewall firewall delete rule name=\"{app_name} Service\"
@@ -3376,6 +3391,7 @@ pub fn uninstall_service(show_new_window: bool, _: bool) -> bool {
     if exist \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\{app_name} Tray.lnk\" del /f /q \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\{app_name} Tray.lnk\"
     taskkill /F /IM {broker_exe}
     taskkill /F /IM \"{app_name}.exe\"{filter}
+    taskkill /F /IM rustdesk.exe{filter}
     ",
         app_name = crate::get_app_name(),
         broker_exe = WIN_TOPMOST_INJECTED_PROCESS_EXE,
@@ -3411,6 +3427,7 @@ fn get_install_service_commands(path: &str, exe: &str) -> ResultType<InstallComm
         "
 chcp 65001
 taskkill /F /IM \"{app_name}.exe\"{filter}
+taskkill /F /IM rustdesk.exe{filter}
 {tray_shortcut_commands}
 copy /Y \"%RUSTDESK_OUTPUT_DIR%\\{app_name} Tray.lnk\" \"%PROGRAMDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\\"
 {import_config}
@@ -3638,6 +3655,7 @@ reg add {subkey} /f /v EstimatedSize /t REG_DWORD /d {size}
 chcp 65001
 sc stop \"{app_name}\"
 taskkill /F /IM \"{app_name}.exe\"{filter}
+taskkill /F /IM rustdesk.exe{filter}
 {reg_cmd}
 {copy_exe}
 {rename_exe}
