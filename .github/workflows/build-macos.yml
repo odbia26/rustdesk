@@ -127,6 +127,7 @@ jobs:
       - name: Install NASM
         shell: bash
         run: |
+          sudo mkdir -p /usr/local/bin /opt/homebrew/bin
           curl -L --retry 3 -o nasm.zip https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/macosx/nasm-2.16.03-macosx.zip
           unzip -q -o nasm.zip
           chmod +x nasm-2.16.03/nasm
@@ -148,6 +149,9 @@ jobs:
           flutter config --no-enable-swift-package-manager
           bash .github/patches/apply_flutter_3.44_source_patches.sh
           
+          # Pre-resolve Flutter dependencies
+          pushd flutter && flutter pub get && popd
+
           # Scheduler binding fix
           cd "$(dirname "$(which flutter)")"
           sed -i -e 's/_setFramesEnabledState(false);/\/\/_setFramesEnabledState(false);/g' ../packages/flutter/lib/src/scheduler/binding.dart || true
@@ -188,20 +192,18 @@ jobs:
       - name: Build Boersis macOS app
         shell: bash
         run: |
-          MIN_MACOS_VERSION="12.3"
-          sed -i -e "s/MACOSX_DEPLOYMENT_TARGET\=[0-9]*.[0-9]*/MACOSX_DEPLOYMENT_TARGET=${MIN_MACOS_VERSION}/" build.py
-          sed -i -e "s/platform :osx, '.*'/platform :osx, '${MIN_MACOS_VERSION}'/" flutter/macos/Podfile
-          sed -i -e "s/osx_minimum_system_version = \"[0-9]*.[0-9]*\"/osx_minimum_system_version = \"${MIN_MACOS_VERSION}\"/" Cargo.toml
-          sed -i -e "s/MACOSX_DEPLOYMENT_TARGET = [0-9]*.[0-9]*;/MACOSX_DEPLOYMENT_TARGET = ${MIN_MACOS_VERSION};/" flutter/macos/Runner.xcodeproj/project.pbxproj
-          export MACOSX_DEPLOYMENT_TARGET="${MIN_MACOS_VERSION}"
+          python3 .github/scripts/set_macos_deployment_target.py "12.3"
+          export MACOSX_DEPLOYMENT_TARGET="12.3"
+          echo "MACOSX_DEPLOYMENT_TARGET=12.3" >> "$GITHUB_ENV"
           ./build.py --flutter --hwcodec --unix-file-copy-paste --screencapturekit
 
       - name: Create Boersis DMG installer
         shell: bash
         run: |
-          CREATE_DMG="$(command -v create-dmg)"
-          CREATE_DMG="$(readlink -f "$CREATE_DMG" || which create-dmg)"
-          sed -i 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG" || true
+          CREATE_DMG_PATH=$(python3 -c "import os, shutil; p = shutil.which('create-dmg'); print(os.path.realpath(p) if p else '')")
+          if [ -n "$CREATE_DMG_PATH" ] && [ -f "$CREATE_DMG_PATH" ]; then
+            sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG_PATH" || true
+          fi
 
           DMG_FILE="Boersis-Remote-Desktop-${{ inputs.build-profile }}-arm64.dmg"
           rm -f "$DMG_FILE"
@@ -219,7 +221,13 @@ jobs:
 
           if [ ! -f "$DMG_FILE" ]; then
             echo "create-dmg not produced, fallback to native hdiutil"
-            hdiutil create -volname "Boersis Remote Desktop" -srcfolder ./flutter/build/macos/Build/Products/Release/RustDesk.app -ov -format UDZO "$DMG_FILE"
+            DMG_STAGING="dmg_staging"
+            rm -rf "$DMG_STAGING"
+            mkdir -p "$DMG_STAGING"
+            cp -R ./flutter/build/macos/Build/Products/Release/RustDesk.app "$DMG_STAGING/"
+            ln -s /Applications "$DMG_STAGING/Applications"
+            hdiutil create -volname "Boersis Remote Desktop" -srcfolder "$DMG_STAGING" -ov -format UDZO "$DMG_FILE"
+            rm -rf "$DMG_STAGING"
           fi
 
           ls -lh "$DMG_FILE"
