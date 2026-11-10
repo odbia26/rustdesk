@@ -611,7 +611,23 @@ pub fn is_installed_lower_version() -> bool {
     return false;
     #[cfg(windows)]
     {
+        if let Ok(cur) = std::env::current_exe() {
+            let (_, _, _, installed_exe) = crate::platform::windows::get_install_info();
+            if let (Ok(cur_can), Ok(inst_can)) = (
+                cur.canonicalize(),
+                std::path::PathBuf::from(&installed_exe).canonicalize(),
+            ) {
+                if cur_can == inst_can {
+                    return false;
+                }
+            } else if cur.to_string_lossy().eq_ignore_ascii_case(&installed_exe) {
+                return false;
+            }
+        }
         let b = crate::platform::windows::get_reg("BuildDate");
+        if b.is_empty() {
+            return false;
+        }
         return crate::BUILD_DATE.cmp(&b).is_gt();
     }
 }
