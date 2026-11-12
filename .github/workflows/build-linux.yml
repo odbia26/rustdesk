@@ -1,0 +1,252 @@
+name: Build Linux Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      build-profile:
+        description: 'Version a compilar (cliente: solo entrante con PIN | operador: bidireccional completo)'
+        required: true
+        type: choice
+        default: 'cliente'
+        options:
+          - cliente
+          - operador
+
+permissions:
+  contents: read
+
+env:
+  VERSION: "1.5.1"
+  RUST_VERSION: "1.75"
+  FLUTTER_VERSION: "3.24.5"
+  CARGO_EXPAND_VERSION: "1.0.95"
+  FLUTTER_RUST_BRIDGE_VERSION: "1.80.1"
+  VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+
+jobs:
+  generate-bridge:
+    name: Generate Flutter Rust Bridge
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            clang \
+            cmake \
+            curl \
+            gcc \
+            git \
+            g++ \
+            libclang-dev \
+            libgtk-3-dev \
+            llvm-dev \
+            nasm \
+            ninja-build \
+            pkg-config \
+            wget
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-unknown-linux-gnu
+          components: "rustfmt"
+
+      - name: Install flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Install flutter rust bridge deps
+        shell: bash
+        run: |
+          cargo install cargo-expand --version ${{ env.CARGO_EXPAND_VERSION }} --locked
+          cargo install flutter_rust_bridge_codegen --version ${{ env.FLUTTER_RUST_BRIDGE_VERSION }} --features "uuid" --locked
+          pushd flutter && flutter pub get && popd
+
+      - name: Run flutter rust bridge
+        run: |
+          ~/.cargo/bin/flutter_rust_bridge_codegen --rust-input ./src/flutter_ffi.rs --dart-output ./flutter/lib/generated_bridge.dart
+
+      - name: Upload Bridge Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bridge-artifact-linux
+          path: |
+            ./src/bridge_generated.rs
+            ./src/bridge_generated.io.rs
+            ./flutter/lib/generated_bridge.dart
+            ./flutter/lib/generated_bridge.freezed.dart
+
+  build-linux:
+    name: Build Linux DEB & AppImage (${{ inputs.build-profile }})
+    needs: [generate-bridge]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Apply Build Profile (${{ inputs.build-profile }})
+        shell: bash
+        run: |
+          python3 .github/scripts/apply_profile.py "${{ inputs.build-profile }}"
+
+      - name: Restore bridge files
+        uses: actions/download-artifact@v4
+        with:
+          name: bridge-artifact-linux
+          path: ./
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            build-essential \
+            clang \
+            cmake \
+            curl \
+            gcc \
+            git \
+            g++ \
+            libayatana-appindicator3-dev \
+            libasound2-dev \
+            libclang-dev \
+            libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev \
+            libgtk-3-dev \
+            libpulse-dev \
+            libva-dev \
+            libxcb-randr0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libxdo-dev \
+            libxfixes-dev \
+            llvm-dev \
+            nasm \
+            ninja-build \
+            pkg-config \
+            python3 \
+            rpm \
+            unzip \
+            wget \
+            xz-utils \
+            libssl-dev \
+            libarchive-tools \
+            libfuse2
+          sudo apt-get remove -y libopus-dev || true
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: x86_64-unknown-linux-gnu
+          components: "rustfmt"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: linux-x86_64
+
+      - name: Setup vcpkg with Github Actions binary cache
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: /opt/artifacts/vcpkg
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+          doNotCache: false
+
+      - name: Install vcpkg dependencies
+        shell: bash
+        run: |
+          sudo apt-get install -y libva-dev
+          if ! $VCPKG_ROOT/vcpkg install --triplet x64-linux --x-install-root="$VCPKG_ROOT/installed"; then
+            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+              echo "$_1:"
+              echo "======"
+              cat "$_1"
+              echo "======"
+              echo ""
+            done
+            exit 1
+          fi
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Patch Flutter dropdown menu
+        shell: bash
+        run: |
+          cd $(dirname $(dirname $(which flutter)))
+          if [ -f "${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff" ]; then
+            git apply ${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff || true
+          fi
+
+      - name: Build Boersis Linux DEB Package
+        shell: bash
+        run: |
+          export VCPKG_ROOT=/opt/artifacts/vcpkg
+          cargo build --locked --lib --features hwcodec,flutter,unix-file-copy-paste --release
+          export DEB_ARCH=amd64
+          python3 ./build.py --flutter --skip-cargo
+
+          DEB_FILE="Boersis-Remote-Desktop-${{ inputs.build-profile }}-amd64.deb"
+          for f in rustdesk*.deb; do
+            if [ -f "$f" ]; then
+              mv "$f" "$DEB_FILE"
+              break
+            fi
+          done
+          ls -lh "$DEB_FILE"
+
+      - name: Build Boersis Linux AppImage
+        shell: bash
+        run: |
+          DEB_FILE="Boersis-Remote-Desktop-${{ inputs.build-profile }}-amd64.deb"
+          if [ -f "$DEB_FILE" ]; then
+            cp "$DEB_FILE" appimage/rustdesk.deb
+            sudo pip3 install "setuptools_scm<10" || true
+            sudo pip3 install git+https://github.com/rustdesk-org/appimage-builder.git || true
+            pushd appimage
+            ./build-apprun.sh x86_64 || true
+            sudo appimage-builder --skip-tests --recipe ./AppImageBuilder-x86_64.yml || true
+            popd
+            APPIMAGE_FILE="Boersis-Remote-Desktop-${{ inputs.build-profile }}-x86_64.AppImage"
+            for ai in appimage/*.AppImage; do
+              if [ -f "$ai" ]; then
+                mv "$ai" "$APPIMAGE_FILE"
+                break
+              fi
+            done
+            if [ -f "$APPIMAGE_FILE" ]; then
+              ls -lh "$APPIMAGE_FILE"
+            fi
+          fi
+
+      - name: Upload Boersis Linux DEB
+        uses: actions/upload-artifact@v4
+        with:
+          name: Boersis-Remote-Desktop-${{ inputs.build-profile }}-amd64-deb
+          path: Boersis-Remote-Desktop-${{ inputs.build-profile }}-amd64.deb
+          if-no-files-found: error
+
+      - name: Upload Boersis Linux AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: Boersis-Remote-Desktop-${{ inputs.build-profile }}-x86_64-appimage
+          path: Boersis-Remote-Desktop-${{ inputs.build-profile }}-x86_64.AppImage
+          if-no-files-found: warn

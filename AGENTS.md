@@ -230,3 +230,20 @@ Then translate that source into the file's target language (infer the language f
 * New English-text keys use sentence case, not Title Case: `Use ID whitelisting`, **not** `Use ID Whitelisting`. Acronyms (ID, IP, 2FA…) stay uppercase. Legacy Title-Case keys (e.g. `Use IP Whitelisting`) stay as-is — do not rename them.
 * Since the key itself is the English display text, a sentence-case key usually needs **no** `en.rs` entry; add one only when the display text must differ from the key (e.g. `*_tip` keys).
 * Append each new key to `template.rs` (with `""`) and to every `src/lang/*.rs` file (translated, or `""` if unsure; always `""` for `it.rs`), at the end of the list.
+
+## Protocolo Permanente de Estado y Control de Cambios
+
+### 1. Regla de Oro: Autorización Estricta para Subidas Remotas
+- Queda TERMINANTEMENTE PROHIBIDO ejecutar comandos de subida remota (`git push`, despliegues o sincronizaciones remotas) sin previa autorización.
+- Antes de subir cualquier cambio, el asistente DEBE presentar un informe técnico detallado (archivos tocados, motivo y justificación) y esperar la aprobación expresa del usuario.
+
+### 2. Panel Obligatorio de Control y Estado
+Al finalizar cualquier respuesta, cambio técnico o consulta, el asistente DEBE incluir al final del mensaje un bloque visual estructurado con los siguientes iconos oficiales:
+- ✅ **Completado:** Tareas, soluciones o análisis ya finalizados y verificados.
+- ⏸️ **En Pausa:** Tareas detenidas deliberadamente a la espera de consolidar otras consultas o decisiones.
+- ⏳ **Pendiente:** Tareas identificadas o planificadas que están en cola para ejecutarse.
+- 🎯 **Próximo Paso:** La siguiente acción concreta a realizar una vez autorizada.
+- ❓ **Consulta:** Pregunta o decisión que requiere respuesta del usuario para avanzar.
+
+### 3. Principio de Minimización y Agrupación
+- Priorizar la consolidación de múltiples ajustes en una sola actualización limpia en lugar de emitir múltiples actualizaciones fragmentadas.

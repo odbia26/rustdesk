@@ -10,6 +10,8 @@ base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 config_rs = os.path.join(base_dir, "libs", "hbb_common", "src", "config.rs")
 runner_rc = os.path.join(base_dir, "flutter", "windows", "runner", "Runner.rc")
 info_plist = os.path.join(base_dir, "flutter", "macos", "Runner", "Info.plist")
+desktop_file = os.path.join(base_dir, "res", "rustdesk.desktop")
+manifest_xml = os.path.join(base_dir, "flutter", "android", "app", "src", "main", "AndroidManifest.xml")
 
 with open(config_rs, "r", encoding="utf-8") as f:
     config_content = f.read()
@@ -23,6 +25,16 @@ plist_content = ""
 if os.path.exists(info_plist):
     with open(info_plist, "r", encoding="utf-8") as f:
         plist_content = f.read()
+
+desktop_content = ""
+if os.path.exists(desktop_file):
+    with open(desktop_file, "r", encoding="utf-8") as f:
+        desktop_content = f.read()
+
+manifest_content = ""
+if os.path.exists(manifest_xml):
+    with open(manifest_xml, "r", encoding="utf-8") as f:
+        manifest_content = f.read()
 
 if profile == "operador":
     # 1. Modo Bidireccional (permite conexiones salientes hacia clientes)
@@ -55,7 +67,7 @@ if profile == "operador":
         r'\g<1>false)',
         config_content
     )
-    # 4. Actualizar descripción en Runner.rc e Info.plist
+    # 4. Actualizar descripción en Runner.rc, Info.plist, rustdesk.desktop y AndroidManifest.xml
     if runner_content:
         runner_content = runner_content.replace(
             'VALUE "FileDescription", "Boersis Remote Desktop" "\\0"',
@@ -69,6 +81,16 @@ if profile == "operador":
         plist_content = plist_content.replace(
             "<string>Boersis Remote Desktop</string>",
             "<string>Boersis Remote Desktop - Operador</string>"
+        )
+    if desktop_content:
+        desktop_content = desktop_content.replace(
+            "Name=Boersis Remote Desktop",
+            "Name=Boersis Remote Desktop - Operador"
+        )
+    if manifest_content:
+        manifest_content = manifest_content.replace(
+            'android:label="Boersis Remote Desktop"',
+            'android:label="Boersis Remote Desktop - Operador"'
         )
 
 elif profile == "cliente":
@@ -105,7 +127,7 @@ elif profile == "cliente":
         r'\g<1>true)',
         config_content
     )
-    # 4. Actualizar descripción en Runner.rc e Info.plist
+    # 4. Actualizar descripción en Runner.rc, Info.plist, rustdesk.desktop y AndroidManifest.xml
     if runner_content:
         runner_content = runner_content.replace(
             'VALUE "FileDescription", "Boersis Remote Desktop" "\\0"',
@@ -120,6 +142,16 @@ elif profile == "cliente":
             "<string>Boersis Remote Desktop - Operador</string>",
             "<string>Boersis Remote Desktop</string>"
         )
+    if desktop_content:
+        desktop_content = desktop_content.replace(
+            "Name=Boersis Remote Desktop - Operador",
+            "Name=Boersis Remote Desktop"
+        )
+    if manifest_content:
+        manifest_content = manifest_content.replace(
+            'android:label="Boersis Remote Desktop - Operador"',
+            'android:label="Boersis Remote Desktop"'
+        )
 
 with open(config_rs, "w", encoding="utf-8") as f:
     f.write(config_content)
@@ -131,5 +163,13 @@ if runner_content and os.path.exists(runner_rc):
 if plist_content and os.path.exists(info_plist):
     with open(info_plist, "w", encoding="utf-8") as f:
         f.write(plist_content)
+
+if desktop_content and os.path.exists(desktop_file):
+    with open(desktop_file, "w", encoding="utf-8") as f:
+        f.write(desktop_content)
+
+if manifest_content and os.path.exists(manifest_xml):
+    with open(manifest_xml, "w", encoding="utf-8") as f:
+        f.write(manifest_content)
 
 print(f"[apply_profile] Successfully configured profile '{profile}'.")
