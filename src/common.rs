@@ -959,6 +959,40 @@ pub fn hostname() -> String {
 }
 
 #[inline]
+pub fn get_active_mac() -> String {
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    if let Ok(Some(mac)) = mac_address::get_mac_address() {
+        return mac.to_string().to_uppercase();
+    }
+    "".to_string()
+}
+
+#[inline]
+pub fn get_active_local_ip() -> String {
+    let local_ip = Config::get_option("local-ip-addr");
+    if !local_ip.is_empty() {
+        return local_ip;
+    }
+    let test_target = Config::get_option("custom-rendezvous-server");
+    let target = if !test_target.is_empty() {
+        format!("{test_target}:21116")
+    } else {
+        "8.8.8.8:53".to_string()
+    };
+    if let Ok(socket) = std::net::UdpSocket::bind("0.0.0.0:0") {
+        if socket.connect(&target).is_ok() || socket.connect("8.8.8.8:53").is_ok() {
+            if let Ok(local_addr) = socket.local_addr() {
+                let ip = local_addr.ip().to_string();
+                if ip != "0.0.0.0" {
+                    return ip;
+                }
+            }
+        }
+    }
+    "".to_string()
+}
+
+#[inline]
 pub fn get_sysinfo() -> serde_json::Value {
     use hbb_common::sysinfo::System;
     let mut system = System::new();
@@ -984,7 +1018,18 @@ pub fn get_sysinfo() -> serde_json::Value {
     {
         os = format!("{os} - {}", system.os_version().unwrap_or_default());
     }
-    let hostname = hostname(); // sys.hostname() return localhost on android in my test
+    let raw_hostname = hostname();
+    let mac = get_active_mac();
+    let local_ip = get_active_local_ip();
+    let display_hostname = if !mac.is_empty() && !local_ip.is_empty() {
+        format!("{raw_hostname} ({mac} / {local_ip})")
+    } else if !local_ip.is_empty() {
+        format!("{raw_hostname} ({local_ip})")
+    } else if !mac.is_empty() {
+        format!("{raw_hostname} ({mac})")
+    } else {
+        raw_hostname.clone()
+    };
     #[cfg(any(target_os = "android", target_os = "ios"))]
     let out;
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -993,7 +1038,10 @@ pub fn get_sysinfo() -> serde_json::Value {
         "cpu": format!("{cpu}{num_cpus}/{num_pcpus} cores"),
         "memory": format!("{memory}GB"),
         "os": os,
-        "hostname": hostname,
+        "hostname": display_hostname,
+        "raw_hostname": raw_hostname,
+        "mac": mac,
+        "local_ip": local_ip,
     });
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     {

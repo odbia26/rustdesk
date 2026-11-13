@@ -66,6 +66,8 @@ class _InstallPageBodyState extends State<_InstallPageBody>
   static const _printerStatusTimeout = Duration(seconds: 5);
 
   late final TextEditingController controller;
+  late final TextEditingController aliasController;
+  late final FocusNode aliasFocusNode;
   final RxBool startmenu = true.obs;
   final RxBool desktopicon = true.obs;
   final RxBool printer = false.obs;
@@ -81,6 +83,12 @@ class _InstallPageBodyState extends State<_InstallPageBody>
 
   _InstallPageBodyState() {
     controller = TextEditingController(text: bind.installInstallPath());
+    String currentAlias = bind.mainGetOptionSync(key: 'preset-device-alias');
+    if (currentAlias.isEmpty) {
+      currentAlias = bind.mainGetOptionSync(key: 'alias');
+    }
+    aliasController = TextEditingController(text: currentAlias);
+    aliasFocusNode = FocusNode();
     final installOptions = jsonDecode(bind.installInstallOptions());
     startmenu.value = installOptions['STARTMENUSHORTCUTS'] != '0';
     desktopicon.value = installOptions['DESKTOPSHORTCUTS'] != '0';
@@ -119,6 +127,8 @@ class _InstallPageBodyState extends State<_InstallPageBody>
   @override
   void dispose() {
     windowManager.removeListener(this);
+    aliasController.dispose();
+    aliasFocusNode.dispose();
     super.dispose();
   }
 
@@ -202,6 +212,21 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                         builder: (context, value, child) =>
                             InstallDirectoryWarning(directoryPath: value.text),
                       ).marginOnly(right: 10),
+                      const SizedBox.shrink(),
+                    ],
+                  ),
+                  TableRow(
+                    children: [
+                      Text('${translate('Alias')}:')
+                          .marginOnly(right: 10),
+                      TextField(
+                        controller: aliasController,
+                        focusNode: aliasFocusNode,
+                        decoration: InputDecoration(
+                          hintText: 'Ej: Farmacia-Caja01 (Opcional)',
+                          contentPadding: EdgeInsets.all(0.75 * em),
+                        ),
+                      ).workaroundFreezeLinuxMint().marginOnly(right: 10, top: 8),
                       const SizedBox.shrink(),
                     ],
                   ),
@@ -299,10 +324,46 @@ class _InstallPageBodyState extends State<_InstallPageBody>
   Future<void> install() async {
     if (!btnEnabled.value) return;
     final installPath = controller.text;
-    do_install() {
+    final alias = aliasController.text.trim();
+
+    if (alias.isEmpty) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.info_outline,
+                      color: Theme.of(dialogContext).colorScheme.primary)
+                  .marginOnly(right: 8),
+              Text('Recordatorio de Alias'),
+            ],
+          ),
+          content: Text(
+              'No ha asignado un alias a este equipo.\nEn el servidor se identificará únicamente con el nombre de red de Windows.\n\n¿Desea continuar sin alias o prefiere asignar uno ahora?'),
+          actions: [
+            dialogButton('Asignar Alias',
+                isOutline: true,
+                onPressed: () => Navigator.of(dialogContext).pop(false)),
+            dialogButton('Continuar sin Alias',
+                onPressed: () => Navigator.of(dialogContext).pop(true)),
+          ],
+        ),
+      );
+      if (proceed != true) {
+        aliasFocusNode.requestFocus();
+        return;
+      }
+    }
+
+    do_install() async {
       btnEnabled.value = false;
       cancelEnabled.value = false;
       showProgress.value = true;
+      if (alias.isNotEmpty) {
+        await bind.mainSetOption(key: 'preset-device-alias', value: alias);
+        await bind.mainSetOption(key: 'alias', value: alias);
+      }
       String args = '';
       if (startmenu.value) args += ' startmenu';
       if (desktopicon.value) args += ' desktopicon';
@@ -314,7 +375,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
       final confirmed =
           await confirmInstallDirectory(this.context, targetPath: installPath);
       if (!mounted || !confirmed) return;
-      do_install();
+      await do_install();
     } finally {
       if (mounted && !showProgress.value) btnEnabled.value = true;
     }

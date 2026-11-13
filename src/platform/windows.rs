@@ -1773,6 +1773,24 @@ copy /Y \"{tmp_path}\\{app_name} Tray.lnk\" \"%PROGRAMDATA%\\Microsoft\\Windows\
         "".to_owned()
     };
 
+    let mut after_install_extra = install_remote_printer;
+    let mut alias = Config::get_option("preset-device-alias");
+    if alias.is_empty() {
+        alias = Config::get_option("alias");
+    }
+    if alias.is_empty() {
+        alias = Config::get_option(keys::OPTION_PRESET_DEVICE_NAME);
+    }
+    if !alias.is_empty() {
+        let safe_alias = alias.replace('"', "");
+        let set_alias = format!("\"{exe}\" --option preset-device-alias \"{safe_alias}\"\r\n\"{exe}\" --option alias \"{safe_alias}\"");
+        if after_install_extra.is_empty() {
+            after_install_extra = set_alias;
+        } else {
+            after_install_extra = format!("{after_install_extra}\r\n{set_alias}");
+        }
+    }
+
     let after_install = get_after_install(
         &exe,
         Some(reg_value_start_menu_shortcuts),
@@ -1780,7 +1798,7 @@ copy /Y \"{tmp_path}\\{app_name} Tray.lnk\" \"%PROGRAMDATA%\\Microsoft\\Windows\
         Some(reg_value_printer),
     );
     let after_install = native_after_install_commands(
-        format!("{after_install}\r\n{install_remote_printer}"),
+        format!("{after_install}\r\n{after_install_extra}"),
         &exe,
         true,
     )?;
