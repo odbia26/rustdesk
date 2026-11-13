@@ -2308,66 +2308,66 @@ async fn key_exchange(conn: &mut Stream, key: &str, log_on_success: bool) -> Res
     let Some(rs_pk) = rs_pk else {
         bail!("Handshake failed: invalid public key from rendezvous server");
     };
-    match timeout(READ_TIMEOUT, conn.next()).await? {
-        Some(Ok(bytes)) => {
-            if let Ok(msg_in) = RendezvousMessage::parse_from_bytes(&bytes) {
-                match msg_in.union {
-                    Some(rendezvous_message::Union::KeyExchange(ex)) => {
-                        if ex.keys.len() != 1 {
-                            bail!("Handshake failed: invalid key exchange message");
-                        }
-                        let their_pk_b = sign::verify(&ex.keys[0], &rs_pk)
-                            .map_err(|_| anyhow!("Signature mismatch in key exchange"))?;
-                        let their_pk_b = get_pk(&their_pk_b)
-                            .context("Wrong their public length in key exchange")?;
-                        // The signed X25519 high bit marks servers that sign their parameters.
-                        // X25519 ignores that bit, so old clients use the key unchanged; keep
-                        // the bytes as signed, since the transcript and KxParams carry them so.
-                        if their_pk_b[31] & 0x80 != 0 || !ex.signed_params.is_empty() {
-                            let params = sign::verify(&ex.signed_params, &rs_pk)
-                                .ok()
-                                .and_then(|signed| {
-                                    let params =
-                                        signed.strip_prefix(hbb_common::tcp::KX_PARAMS_DOMAIN)?;
-                                    KxParams::parse_from_bytes(params).ok()
-                                })
-                                .ok_or_else(|| {
-                                    anyhow!("Missing or invalid signed key exchange parameters")
-                                })?;
-                            if params.pk[..] != their_pk_b[..] || params.version != ex.version {
-                                bail!("Key exchange version or public key does not match its signature");
-                            }
-                        }
-                        let (asymmetric_value, symmetric_value, key) =
-                            create_symmetric_key_msg(their_pk_b);
-                        let picked = hbb_common::tcp::kx_version_for(ex.version);
-                        let mut msg_out = RendezvousMessage::new();
-                        msg_out.set_key_exchange(KeyExchange {
-                            keys: vec![asymmetric_value.clone(), symmetric_value],
-                            version: picked,
-                            ..Default::default()
-                        });
-                        timeout(CONNECT_TIMEOUT, conn.send(&msg_out)).await??;
-                        conn.set_negotiated_key(
-                            key,
-                            true,
-                            &hbb_common::tcp::KxTranscript {
-                                initiator_pk: &asymmetric_value,
-                                responder_pk: &their_pk_b,
-                                advertised: ex.version,
-                                picked,
-                            },
-                        )?;
-                        if log_on_success {
-                            log::info!("Connection secured");
-                        }
-                        return Ok(true);
+    // The server emits KeyExchange immediately on connection accept; standard / legacy servers do not.
+    // Use a short probe timeout so connecting against servers without KeyExchange does not stall.
+    let kx_timeout = Duration::from_millis(1000);
+    if let Ok(Some(Ok(bytes))) = timeout(kx_timeout, conn.next()).await {
+        if let Ok(msg_in) = RendezvousMessage::parse_from_bytes(&bytes) {
+            match msg_in.union {
+                Some(rendezvous_message::Union::KeyExchange(ex)) => {
+                    if ex.keys.len() != 1 {
+                        bail!("Handshake failed: invalid key exchange message");
                     }
-                    _ => {}
+                    let their_pk_b = sign::verify(&ex.keys[0], &rs_pk)
+                        .map_err(|_| anyhow!("Signature mismatch in key exchange"))?;
+                    let their_pk_b = get_pk(&their_pk_b)
+                        .context("Wrong their public length in key exchange")?;
+                    // The signed X25519 high bit marks servers that sign their parameters.
+                    // X25519 ignores that bit, so old clients use the key unchanged; keep
+                    // the bytes as signed, since the transcript and KxParams carry them so.
+                    if their_pk_b[31] & 0x80 != 0 || !ex.signed_params.is_empty() {
+                        let params = sign::verify(&ex.signed_params, &rs_pk)
+                            .ok()
+                            .and_then(|signed| {
+                                let params =
+                                    signed.strip_prefix(hbb_common::tcp::KX_PARAMS_DOMAIN)?;
+                                KxParams::parse_from_bytes(params).ok()
+                            })
+                            .ok_or_else(|| {
+                                anyhow!("Missing or invalid signed key exchange parameters")
+                            })?;
+                        if params.pk[..] != their_pk_b[..] || params.version != ex.version {
+                            bail!("Key exchange version or public key does not match its signature");
+                        }
+                    }
+                    let (asymmetric_value, symmetric_value, key) =
+                        create_symmetric_key_msg(their_pk_b);
+                    let picked = hbb_common::tcp::kx_version_for(ex.version);
+                    let mut msg_out = RendezvousMessage::new();
+                    msg_out.set_key_exchange(KeyExchange {
+                        keys: vec![asymmetric_value.clone(), symmetric_value],
+                        version: picked,
+                        ..Default::default()
+                    });
+                    timeout(CONNECT_TIMEOUT, conn.send(&msg_out)).await??;
+                    conn.set_negotiated_key(
+                        key,
+                        true,
+                        &hbb_common::tcp::KxTranscript {
+                            initiator_pk: &asymmetric_value,
+                            responder_pk: &their_pk_b,
+                            advertised: ex.version,
+                            picked,
+                        },
+                    )?;
+                    if log_on_success {
+                        log::info!("Connection secured");
+                    }
+                    return Ok(true);
                 }
+                _ => {}
             }
         }
-        _ => {}
     }
     Ok(false)
 }

@@ -865,6 +865,7 @@ impl Client {
         // wait rather than replacing it: the test runs beside both.
         let udp_nat_wait_from = Instant::now();
         let mut exchanged = false;
+        let mut server_supports_kx = true;
         if carries_offer {
             // An offer puts both sides' ICE candidates, every interface address of both
             // machines, on this socket, so it goes out only once the server's key exchange has
@@ -880,16 +881,15 @@ impl Client {
                         rendezvous_server,
                         err
                     );
+                    server_supports_kx = false;
                     webrtc_offerer = None;
                     socket = connect_tcp(&*rendezvous_server, CONNECT_TIMEOUT).await?;
                     my_addr = socket.local_addr();
                 }
             }
         }
-        if !exchanged && legacy_secure {
-            secure_tcp(&mut socket, &key)
-                .await
-                .map_err(|e| anyhow!("Failed to secure tcp: {}", e))?;
+        if !exchanged && legacy_secure && server_supports_kx {
+            allow_err!(secure_tcp(&mut socket, &key).await);
         }
         // A token or switch code has always taken this socket straight to the punch without
         // waiting for the UDP NAT test. The WebRTC exchange does not replace that wait, it only
@@ -1808,7 +1808,7 @@ impl Client {
                 .with_context(|| "Failed to connect to rendezvous server")?;
 
             if !key.is_empty() && (!token.is_empty() || !switch_code.is_empty()) {
-                secure_tcp(&mut socket, key).await?;
+                allow_err!(secure_tcp(&mut socket, key).await);
             }
 
             ipv4 = socket.local_addr().is_ipv4();
@@ -5291,7 +5291,7 @@ async fn hc_connection_(
     let host = check_port(&rendezvous_server, RENDEZVOUS_PORT);
     let mut conn = connect_tcp(host.clone(), CONNECT_TIMEOUT).await?;
     let key = crate::get_key(true).await;
-    crate::secure_tcp(&mut conn, &key).await?;
+    allow_err!(crate::secure_tcp(&mut conn, &key).await);
     let mut msg_out = RendezvousMessage::new();
     msg_out.set_hc(HealthCheck {
         token,
