@@ -247,3 +247,9 @@ Al finalizar cualquier respuesta, cambio técnico o consulta, el asistente DEBE 
 
 ### 3. Principio de Minimización y Agrupación
 - Priorizar la consolidación de múltiples ajustes en una sola actualización limpia en lugar de emitir múltiples actualizaciones fragmentadas.
+
+### 4. Protocolo Permanente de Validación Exhaustiva Pre-Push Multiplataforma y Multivariante
+- **Análisis Preventivo Integral:** Antes de proponer o solicitar autorización para cualquier subida a GitHub (`git push`), el asistente DEBE analizar minuciosamente y anticiparse a cualquier posible fallo en tiempo de compilación, empaquetado o ejecución en los runners de GitHub Actions.
+- **Validación Multivariante Obligatoria:** Evaluar y contrastar sistemáticamente los perfiles `cliente` (modo entrante con PIN fijo) y `operador` (modo bidireccional), garantizando que los scripts de perfil (`apply_profile.py`) y las configuraciones específicas funcionen sin fisuras en ambos casos.
+- **Validación Multiplataforma Exhaustiva:** Auditar minuciosamente cada directiva condicional (`#[cfg]`), biblioteca FFI, dependencias de `Cargo.toml`, archivos Dart/Flutter y flujos CI para todos los sistemas operativos soportados (Windows, Linux, macOS y Android).
+- **Ciclo Local de Auditoría y Autocorrección:** Cualquier detalle, advertencia estricta, colisión de tipos, ambigüedad de identificadores de ámbito o incompatibilidad de plataforma debe detectarse, corregirse, re-verificarse y quedar 100% blindado antes de presentar la solución y solicitar el visto bueno para el push.

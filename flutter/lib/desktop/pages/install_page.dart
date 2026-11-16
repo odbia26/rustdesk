@@ -8,7 +8,7 @@ import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' hide Context, context;
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -328,7 +328,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
 
     if (alias.isEmpty) {
       final proceed = await showDialog<bool>(
-        context: context,
+        context: this.context,
         barrierDismissible: false,
         builder: (dialogContext) => AlertDialog(
           title: Row(
@@ -340,7 +340,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
             ],
           ),
           content: Text(
-              'No ha asignado un alias a este equipo.\nEn el servidor se identificará únicamente con el nombre de red de Windows.\n\n¿Desea continuar sin alias o prefiere asignar uno ahora?'),
+              'No ha asignado un alias a este equipo.\nEn el servidor se identificará únicamente con el nombre de red del equipo.\n\n¿Desea continuar sin alias o prefiere asignar uno ahora?'),
           actions: [
             dialogButton('Asignar Alias',
                 isOutline: true,
