@@ -1034,22 +1034,23 @@ pub fn get_sysinfo() -> serde_json::Value {
     let mac = get_active_mac();
     let local_ip = get_active_local_ip();
     let alias = get_active_alias();
-    let details = if !mac.is_empty() && !local_ip.is_empty() {
-        format!("{mac} / {local_ip}")
-    } else if !local_ip.is_empty() {
-        local_ip
-    } else {
-        mac
-    };
     let display_hostname = if !alias.is_empty() {
-        if !details.is_empty() {
-            format!("{alias} ({raw_hostname} / {details})")
+        if !mac.is_empty() && !local_ip.is_empty() {
+            format!("{alias} ({raw_hostname} / {mac} / {local_ip})")
+        } else if !local_ip.is_empty() {
+            format!("{alias} ({raw_hostname} / {local_ip})")
+        } else if !mac.is_empty() {
+            format!("{alias} ({raw_hostname} / {mac})")
         } else {
             format!("{alias} ({raw_hostname})")
         }
     } else {
-        if !details.is_empty() {
-            format!("{raw_hostname} ({details})")
+        if !mac.is_empty() && !local_ip.is_empty() {
+            format!("{raw_hostname} ({mac} / {local_ip})")
+        } else if !local_ip.is_empty() {
+            format!("{raw_hostname} ({local_ip})")
+        } else if !mac.is_empty() {
+            format!("{raw_hostname} ({mac})")
         } else {
             raw_hostname.clone()
         }
