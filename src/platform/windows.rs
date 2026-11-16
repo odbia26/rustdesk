@@ -1779,7 +1779,7 @@ copy /Y \"{tmp_path}\\{app_name} Tray.lnk\" \"%PROGRAMDATA%\\Microsoft\\Windows\
         alias = Config::get_option("alias");
     }
     if alias.is_empty() {
-        alias = Config::get_option(keys::OPTION_PRESET_DEVICE_NAME);
+        alias = Config::get_option("preset-device-name");
     }
     if !alias.is_empty() {
         let safe_alias = alias.replace('"', "");

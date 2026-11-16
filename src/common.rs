@@ -2358,8 +2358,7 @@ async fn key_exchange(conn: &mut Stream, key: &str, log_on_success: bool) -> Res
     };
     // The server emits KeyExchange immediately on connection accept; standard / legacy servers do not.
     // Use a short probe timeout so connecting against servers without KeyExchange does not stall.
-    let kx_timeout = Duration::from_millis(1000);
-    if let Ok(Some(Ok(bytes))) = timeout(kx_timeout, conn.next()).await {
+    if let Ok(Some(Ok(bytes))) = timeout(1000, conn.next()).await {
         if let Ok(msg_in) = RendezvousMessage::parse_from_bytes(&bytes) {
             match msg_in.union {
                 Some(rendezvous_message::Union::KeyExchange(ex)) => {
