@@ -993,6 +993,18 @@ pub fn get_active_local_ip() -> String {
 }
 
 #[inline]
+pub fn get_active_alias() -> String {
+    let mut alias = Config::get_option("preset-device-alias");
+    if alias.is_empty() {
+        alias = Config::get_option("alias");
+    }
+    if alias.is_empty() {
+        alias = Config::get_option("preset-device-name");
+    }
+    alias
+}
+
+#[inline]
 pub fn get_sysinfo() -> serde_json::Value {
     use hbb_common::sysinfo::System;
     let mut system = System::new();
@@ -1021,14 +1033,26 @@ pub fn get_sysinfo() -> serde_json::Value {
     let raw_hostname = hostname();
     let mac = get_active_mac();
     let local_ip = get_active_local_ip();
-    let display_hostname = if !mac.is_empty() && !local_ip.is_empty() {
-        format!("{raw_hostname} ({mac} / {local_ip})")
+    let alias = get_active_alias();
+    let details = if !mac.is_empty() && !local_ip.is_empty() {
+        format!("{mac} / {local_ip}")
     } else if !local_ip.is_empty() {
-        format!("{raw_hostname} ({local_ip})")
-    } else if !mac.is_empty() {
-        format!("{raw_hostname} ({mac})")
+        local_ip
     } else {
-        raw_hostname.clone()
+        mac
+    };
+    let display_hostname = if !alias.is_empty() {
+        if !details.is_empty() {
+            format!("{alias} ({raw_hostname} / {details})")
+        } else {
+            format!("{alias} ({raw_hostname})")
+        }
+    } else {
+        if !details.is_empty() {
+            format!("{raw_hostname} ({details})")
+        } else {
+            raw_hostname.clone()
+        }
     };
     #[cfg(any(target_os = "android", target_os = "ios"))]
     let out;
@@ -1040,6 +1064,7 @@ pub fn get_sysinfo() -> serde_json::Value {
         "os": os,
         "hostname": display_hostname,
         "raw_hostname": raw_hostname,
+        "alias": alias,
         "mac": mac,
         "local_ip": local_ip,
     });
